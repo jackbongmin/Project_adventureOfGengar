@@ -27,7 +27,7 @@ void Enemy::Update(World& w) {
 
 void Enemy::ApplyIntent(World&) {
   vel.x = intent_.moveX * moveSpeed_;
-  if (intent_.moveX != 0.f) SetFacing(static_cast<int>(intent_.moveX));
+  if (intent_.moveX != 0.f) SetFacing(Sign(intent_.moveX));  // 순찰처럼 이동 값이 소수여도 방향이 갱신되게 부호로 변환
   if (intent_.jumpPressed && onGround_) vel.y = -jumpSpeed_;
 }
 

@@ -34,6 +34,11 @@ void ChaseController::Think(Character& self, World& world, Intent& out) {
   const float dx = pc.x - ec.x, dy = pc.y - ec.y;
   if (cooldown_ > 0) --cooldown_;
 
+  // 검증: 직전 프레임에 움직이려던 방향과 실제로 바라보는 방향이 같아야 한다.
+  if (std::fabs(lastMoveX_) > 0.01f && self.Facing() != Sign(lastMoveX_) && mismatchLogged_++ < 3) {
+    DebugLog("[hound] FACING MISMATCH: moving %s but facing %s (aggro=%d)", lastMoveX_ > 0 ? "right" : "left", self.Facing() > 0 ? "right" : "left", aggro_ ? 1 : 0);
+  }
+
   if (forceAggro_) {  // 검증용: 높이 조건과 상관없이 추적 상태로 시작
     forceAggro_ = false;
     aggro_ = true;
@@ -67,6 +72,7 @@ void ChaseController::Think(Character& self, World& world, Intent& out) {
     if (blocked || self.HitWall()) patrolDir_ = -patrolDir_;
     out.moveX = static_cast<float>(patrolDir_) * patrolRatio_;
   }
+  lastMoveX_ = out.moveX;
 }
 
 }  // namespace gengar

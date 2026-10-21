@@ -23,6 +23,8 @@ class ChaseController : public Controller {
   bool forceAggro_ = false;
   int offLevelFrames_ = 0;  // 높이 차이가 큰 상태로 이어진 프레임 수
   int cooldown_ = 0;        // 포기한 뒤 재추적 금지 시간
+  float lastMoveX_ = 0.f;   // 직전 프레임에 요청한 이동 (방향 일치 검사용)
+  int mismatchLogged_ = 0;
 };
 
 }  // namespace gengar

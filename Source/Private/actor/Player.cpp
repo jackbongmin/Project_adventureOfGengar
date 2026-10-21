@@ -34,7 +34,7 @@ void Player::Update(World& w) {
   const float maxSpeed = stats::MoveSpeed(s);
   if (intent_.moveX != 0.f) {
     vel.x += intent_.moveX * 0.55f;
-    SetFacing(static_cast<int>(intent_.moveX));
+    SetFacing(Sign(intent_.moveX));
   } else {
     vel.x *= onGround_ ? 0.78f : 0.93f;
   }
