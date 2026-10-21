@@ -10,8 +10,8 @@
 
 namespace gengar {
 
-EnemyOrb::EnemyOrb(Vec2 center, Vec2 velocity, float homingTurn, int lifeFrames)
-    : Actor(ActorKind::EnemyShot), homingTurn_(homingTurn), life_(lifeFrames) {
+EnemyOrb::EnemyOrb(Vec2 center, Vec2 velocity, float homingTurn, int lifeFrames, bool piercing)
+    : Actor(ActorKind::EnemyShot), homingTurn_(homingTurn), life_(lifeFrames), piercing_(piercing) {
   pos = center;
   vel = velocity;
   size = {radius_ * 2.f, radius_ * 2.f};
@@ -35,7 +35,8 @@ void EnemyOrb::Update(World& w) {
     Kill();
     return;
   }
-  if (w.GetLevel().Solid(static_cast<int>(std::floor(pos.x / T)), static_cast<int>(std::floor(pos.y / T)))) {
+  const int row = static_cast<int>(std::floor(pos.y / T));
+  if ((!piercing_ || row >= cfg::kGroundRow) && w.GetLevel().Solid(static_cast<int>(std::floor(pos.x / T)), row)) {
     w.Fx().Burst(pos, 5, Hex(0xff5ca8), 2.f, 16.f);
     Kill();
     return;

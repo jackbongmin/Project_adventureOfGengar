@@ -70,11 +70,11 @@ void Boss::FloatMove() {
 }
 
 void Boss::FireHomingOrb(Vec2 from, float angle, float speed, float turnPerFrame, int lifeFrames) {
-  world_->Spawn<EnemyOrb>(from, Vec2{std::cos(angle) * speed, std::sin(angle) * speed}, turnPerFrame, lifeFrames);
+  world_->Spawn<EnemyOrb>(from, Vec2{std::cos(angle) * speed, std::sin(angle) * speed}, turnPerFrame, lifeFrames, true);
 }
 
 void Boss::FireOrb(Vec2 from, float angle, float speed) {
-  world_->Spawn<EnemyOrb>(from, Vec2{std::cos(angle) * speed, std::sin(angle) * speed});
+  world_->Spawn<EnemyOrb>(from, Vec2{std::cos(angle) * speed, std::sin(angle) * speed}, 0.f, 0, true);  // 보스 탄은 발판을 뚫는다
 }
 
 void Boss::Update(World& w) {
