@@ -116,7 +116,22 @@ void ShopMode::Render(Graphics& g) {
   };
   for (size_t i = 0; i < 8; ++i) g.Text(lines[i], 684, 244.f + static_cast<float>(i) * 22.f, 2, Hex(0xe6d6ff), Align::Left, false);
   const bool boss = s.stage + 1 == cfg::kBossStage;
-  g.Text(boss ? "NEXT: FINAL BOSS!" : "NEXT: STAGE " + std::to_string(s.stage + 2), 790, 462, 2, boss ? Hex(0xff7aa8) : Hex(0xd9c2ff), Align::Center);
+  g.Text(boss ? "NEXT: FINAL BOSS!" : "NEXT: STAGE " + std::to_string(s.stage + 2), W - 50.f, 84, 2, boss ? Hex(0xff7aa8) : Hex(0xd9c2ff), Align::Right);
+
+  // 선택한 항목을 사면 무엇이 얼마로 바뀌는지 (패널 아래)
+  if (selected_ < static_cast<int>(defs.size())) {
+    const UpgradeDef& sel = defs[static_cast<size_t>(selected_)];
+    if (NextCost(sel, s) < 0) {
+      g.Text("MAXED OUT", 790, 466, 3, Hex(0x9a82c0), Align::Center);
+    } else {
+      const UpgradePreview pv = PreviewUpgrade(sel, s);
+      g.Text("IF YOU BUY:", 790, 448, 2, Hex(0x9a82c0), Align::Center, false);
+      g.Text(pv.label, 790, 470, 2, Hex(0xe6d6ff), Align::Center, false);
+      g.Text(pv.change, 790, 494, 3, Hex(0xffe27a), Align::Center);
+    }
+  } else {
+    g.Text("READY?", 790, 470, 3, Hex(0xffe27a), Align::Center);
+  }
 }
 
 }  // namespace gengar
