@@ -4,7 +4,7 @@
 
 namespace gengar {
 
-enum class BossAttack { Volley, Ring, Summon, Slam, Beam, Rain, Pillar, Dash, Blink };
+enum class BossAttack { Volley, Ring, Summon, Slam, Beam, Rain, Pillar, Dash, Blink, Spiral, Homing, Lunge };
 
 const std::vector<BossAttack>& AttackSequence(int phase);  // phase 0~2
 const char* AttackName(BossAttack attack);

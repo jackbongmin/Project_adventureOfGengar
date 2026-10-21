@@ -8,6 +8,7 @@
 #include "actor/hazard/PillarHazard.h"
 #include "actor/projectile/Shockwave.h"
 #include "core/Config.h"
+#include "core/DebugOptions.h"
 #include "core/Random.h"
 #include "core/Session.h"
 #include "platform/Audio.h"
@@ -37,7 +38,7 @@ class EnterState : public BossStateBase {
     b.pos.y += (360.f - b.pos.y) * 0.04f;
     b.alpha = std::min(1.f, static_cast<float>(t_) / 60.f);
     b.GetWorld().Fx().Shake(2.f);
-    if (t_ > 140) b.ToFloat();
+    if (t_ > 140) { DebugLog("[boss] fight start"); b.ToFloat(); }
   }
 };
 
@@ -136,7 +137,7 @@ class SlamState : public BossStateBase {
       b.pos.x += Clamp((b.PlayerCenter().x - b.pos.x) * 0.08f, -6.f, 6.f);
       b.pos.y += (150.f - b.pos.y) * 0.1f;
       b.charge = std::min(1.f, static_cast<float>(t_) / 50.f);
-      if (t_ >= 50) { sub_ = 1; fall_ = 0.f; b.charge = 0.f; }
+      if (t_ >= 50) { sub_ = 1; fall_ = 0.f; b.charge = 0.f; b.contactEnabled = true; }  // 낙하 중에만 접촉 피해
     } else if (sub_ == 1) {
       fall_ += 0.9f;
       b.pos.y += fall_;
@@ -144,6 +145,7 @@ class SlamState : public BossStateBase {
         b.pos.y = kGroundY - 52.f;
         sub_ = 2;
         t_ = 0;
+        b.contactEnabled = false;
         b.damageMultiplier = 1.5f;
         w.Fx().Shake(16.f);
         w.Snd().Play(Sfx::BossSlam);
@@ -186,7 +188,7 @@ class BeamState : public BossStateBase {
       const float ca = std::cos(b.beam.angle), sa = std::sin(b.beam.angle);
       Player& p = w.GetPlayer();
       if (p.IsAlive() && dx * ca + dy * sa > 0.f && std::fabs(dx * sa - dy * ca) < 17.f) {
-        p.TakeDamage(w, DamageInfo{1.f, Sign(dx) != 0 ? Sign(dx) : 1});
+        p.TakeDamage(w, DamageInfo{1.f, Sign(dx) != 0 ? Sign(dx) : 1, false, false, "beam"});
       }
     }
     if (t_ >= 95) b.ToFloat();
@@ -250,7 +252,7 @@ class DashState : public BossStateBase {
       b.pos.y += (424.f - b.pos.y) * 0.1f;
       b.charge = std::min(1.f, static_cast<float>(t_) / 50.f);
       if ((t_ >= 55 && std::fabs(b.pos.x - targetX_) < 14.f) || t_ >= 110) {
-        sub_ = 1; t_ = 0; b.charge = 0.f;
+        sub_ = 1; t_ = 0; b.charge = 0.f; b.contactEnabled = true;  // 질주 중에만 접촉 피해
         w.Snd().Play(Sfx::BossDash);
       }
     } else if (sub_ == 1) {
@@ -260,6 +262,7 @@ class DashState : public BossStateBase {
       if (b.pos.x <= 100.f || b.pos.x >= kW - 100.f) {
         b.pos.x = Clamp(b.pos.x, 100.f, kW - 100.f);
         sub_ = 2; t_ = 0;
+        b.contactEnabled = false;
         b.damageMultiplier = 1.5f;
         w.Fx().Shake(14.f);
         w.Snd().Play(Sfx::BossSlam);
@@ -306,6 +309,105 @@ class BlinkState : public BossStateBase {
   }
 };
 
+
+// 소용돌이 탄막: 멀리서 회전하는 탄 줄기를 연달아 뿌린다 (단계가 오를수록 줄기 수 증가)
+class SpiralState : public BossStateBase {
+ public:
+  const char* Name() const override { return "Spiral"; }
+  void Update(Boss& b) override {
+    ++t_;
+    const int ph = b.Phase();
+    b.FloatMove();
+    b.charge = t_ < 30 ? static_cast<float>(t_) / 30.f : 0.f;
+    if (t_ >= 30 && t_ < 130 && t_ % 5 == 0) {
+      const int arms = 2 + ph;
+      const float base = static_cast<float>(t_) * 0.16f;
+      for (int i = 0; i < arms; ++i) b.FireOrb(b.pos, base + static_cast<float>(i) * 2.f * kPi / static_cast<float>(arms), 3.f + static_cast<float>(ph) * 0.3f);
+      if (t_ % 20 == 0) b.GetWorld().Snd().Play(Sfx::BossShoot);
+    }
+    if (t_ >= 170) b.ToFloat();
+  }
+};
+
+// 유도탄: 플레이어를 향해 천천히 휘어지며 따라오는 구슬. 일정 시간 뒤 사라지므로 피하거나 멀리 돌면 된다.
+class HomingState : public BossStateBase {
+ public:
+  const char* Name() const override { return "Homing"; }
+  void Update(Boss& b) override {
+    ++t_;
+    const int ph = b.Phase();
+    b.FloatMove();
+    b.charge = t_ < 40 ? static_cast<float>(t_) / 40.f : 0.f;
+    if (t_ == 40) {
+      const int count = 2 + ph;
+      const Vec2 pc = b.PlayerCenter();
+      const float base = std::atan2(pc.y - b.pos.y, pc.x - b.pos.x);
+      for (int i = 0; i < count; ++i) {
+        b.FireHomingOrb(b.pos, base + (static_cast<float>(i) - static_cast<float>(count - 1) / 2.f) * 0.6f, 2.6f, 0.022f, 150);
+      }
+      b.GetWorld().Snd().Play(Sfx::BossShoot);
+    }
+    if (t_ >= 70) b.ToFloat();
+  }
+};
+
+// 돌격: 기를 모으며 조준선으로 플레이어 위치를 고정해 보여 준 뒤(예고), 그 선을 따라 몸으로 달려든다.
+// 바닥에 닿으면 바닥을 따라 계속 질주하다가 멈추고, 그 뒤 잠시 빈틈이 생긴다(피해 1.5배).
+// 3단계에서는 연속 2회.
+class LungeState : public BossStateBase {
+ public:
+  const char* Name() const override { return "Lunge"; }
+  void Update(Boss& b) override {
+    ++t_;
+    World& w = b.GetWorld();
+    const int ph = b.Phase();
+    if (sub_ == 0) {
+      if (t_ < 15) b.FloatMove();  // 조준을 고정하기 전까지는 천천히 떠 있다
+      b.charge = std::min(1.f, static_cast<float>(t_) / 50.f);
+      if (t_ == 15) {  // 조준 고정: 이후 이 선을 따라 돌진한다
+        const Vec2 pc = b.PlayerCenter();
+        angle_ = std::atan2(pc.y - b.pos.y, pc.x - b.pos.x);
+        b.beam = BeamInfo{true, false, angle_, 1};
+        w.Snd().Play(Sfx::BeamCharge);
+      }
+      if (t_ >= 55) {
+        sub_ = 1; t_ = 0; traveled_ = 0.f; onFloor_ = false;
+        b.charge = 0.f;
+        b.beam.active = false;
+        b.contactEnabled = true;  // 돌진 중에만 접촉 피해
+        w.Snd().Play(Sfx::BossDash);
+      }
+    } else if (sub_ == 1) {
+      const float speed = 13.f + static_cast<float>(ph) * 1.5f;
+      float vx = std::cos(angle_) * speed, vy = std::sin(angle_) * speed;
+      if (onFloor_) { vx = (vx >= 0.f ? 1.f : -1.f) * speed; vy = 0.f; }  // 바닥을 따라 질주
+      b.pos.x += vx;
+      b.pos.y += vy;
+      traveled_ += speed;
+      if (t_ % 2 == 0) w.Fx().Burst(b.pos, 2, Hex(0xd9a0ff), 3.f, 14.f);
+      w.Fx().Shake(2.f);
+      if (b.pos.y + 52.f >= kGroundY) { b.pos.y = kGroundY - 52.f; onFloor_ = true; }
+      const bool wall = b.pos.x <= 100.f || b.pos.x >= kW - 100.f, ceiling = b.pos.y < 70.f, tooFar = traveled_ > 950.f;
+      if (wall || ceiling || tooFar) {
+        b.pos.x = Clamp(b.pos.x, 100.f, kW - 100.f);
+        b.pos.y = std::max(b.pos.y, 70.f);
+        sub_ = 2; t_ = 0;
+        b.contactEnabled = false;
+        b.damageMultiplier = 1.5f;
+        w.Fx().Shake(12.f);
+        w.Snd().Play(Sfx::BossSlam);
+      }
+    } else if (t_ >= 45) {
+      if (ph >= 2 && n_ < 1) { ++n_; sub_ = 0; t_ = 0; b.damageMultiplier = 1.f; }
+      else b.ToFloat();
+    }
+  }
+
+ private:
+  float angle_ = 0.f, traveled_ = 0.f;
+  bool onFloor_ = false;
+};
+
 // 사망: 연쇄 폭발 후 사라지며 스테이지 클리어(보스 격파)를 알린다
 class DyingState : public BossStateBase {
  public:
@@ -327,6 +429,7 @@ class DyingState : public BossStateBase {
       w.Fx().Burst(b.pos, 80, Hex(0xffd0ff), 9.f, 70.f);
       Session& s = w.Sess();
       s.score += 5000 + s.lives * 1000 + w.GetPlayer().Hp() * 200;
+      DebugLog("[boss] DEFEATED");
       w.NotifyBossDefeated();
       b.Kill();
     }
@@ -350,6 +453,9 @@ std::unique_ptr<BossState> MakeBossAttackState(BossAttack attack) {
     case BossAttack::Pillar: return std::make_unique<PillarState>();
     case BossAttack::Dash: return std::make_unique<DashState>();
     case BossAttack::Blink: return std::make_unique<BlinkState>();
+    case BossAttack::Spiral: return std::make_unique<SpiralState>();
+    case BossAttack::Homing: return std::make_unique<HomingState>();
+    case BossAttack::Lunge: return std::make_unique<LungeState>();
   }
   return std::make_unique<FloatState>();
 }

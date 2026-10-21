@@ -8,6 +8,7 @@
 #include "actor/projectile/EnemyOrb.h"
 #include "art/Art.h"
 #include "core/Config.h"
+#include "core/DebugOptions.h"
 #include "core/Random.h"
 #include "platform/Audio.h"
 #include "platform/Graphics.h"
@@ -35,23 +36,36 @@ void Boss::ToFloat() {
   beam.active = false;
   alpha = 1.f;
   invulnerable = false;
-  contactEnabled = true;
+  contactEnabled = false;  // 평소에는 몸으로 피해를 주지 않는다
   damageMultiplier = 1.f;
   machine_.Change(MakeBossFloatState());
 }
 
 void Boss::StartAttack(BossAttack attack) {
   attackName_ = gengar::AttackName(attack);
+  DebugLog("[boss] attack %s (phase %d, hp %d/%d)", attackName_, phase_ + 1, Hp(), MaxHp());
   attackNameTimer_ = 70;
   machine_.Change(MakeBossAttackState(attack));
 }
 
+// 플레이어를 몸으로 쫓지 않고, 약 250px 거리를 둔 채 둥실 떠다닌다. 벽에 몰리면 반대편으로 넘어간다.
 void Boss::FloatMove() {
-  const float pc = PlayerCenter().x;
-  const float targetX = Clamp(pc + std::sin(static_cast<float>(tick_) * 0.02f) * 170.f, 100.f, static_cast<float>(cfg::kScreenW) - 100.f);
+  constexpr float kW = static_cast<float>(cfg::kScreenW), kKeepDistance = 250.f;
+  const float pc = PlayerCenter().x, dx = pos.x - pc;
+  if (std::fabs(dx) > 80.f) sideDir_ = dx > 0.f ? 1 : -1;
+  float desired = pc + static_cast<float>(sideDir_) * kKeepDistance;
+  if (desired > kW - 110.f || desired < 110.f) {
+    sideDir_ = -sideDir_;
+    desired = pc + static_cast<float>(sideDir_) * kKeepDistance;
+  }
+  desired = Clamp(desired + std::sin(static_cast<float>(tick_) * 0.02f) * 40.f, 110.f, kW - 110.f);
   const float sp = PhaseSpeed();
-  pos.x += Clamp((targetX - pos.x) * 0.03f, -sp, sp);
-  pos.y += (360.f + std::sin(static_cast<float>(tick_) * 0.04f) * 50.f - pos.y) * 0.06f;
+  pos.x += Clamp((desired - pos.x) * 0.03f, -sp, sp);
+  pos.y += (330.f + std::sin(static_cast<float>(tick_) * 0.04f) * 45.f - pos.y) * 0.06f;
+}
+
+void Boss::FireHomingOrb(Vec2 from, float angle, float speed, float turnPerFrame, int lifeFrames) {
+  world_->Spawn<EnemyOrb>(from, Vec2{std::cos(angle) * speed, std::sin(angle) * speed}, turnPerFrame, lifeFrames);
 }
 
 void Boss::FireOrb(Vec2 from, float angle, float speed) {
@@ -72,12 +86,14 @@ void Boss::Update(World& w) {
     const int ph = ratio > 0.66f ? 0 : ratio > 0.33f ? 1 : 2;
     if (ph != phase_) {
       phase_ = ph;
+      DebugLog("[boss] PHASE %d reached (hp %d/%d)", ph + 1, Hp(), MaxHp());
       w.Fx().Shake(14.f);
       w.Snd().Play(Sfx::BossPhase);
       w.ShowBanner(ph == 1 ? "- RAGE -" : "- FURY -", 90);
     }
   }
 
+  if (tick_ % 120 == 0) DebugLog("[boss] state=%s dist=%d", machine_.CurrentName(), static_cast<int>(std::fabs(pos.x - pc.x)));
   machine_.Update();
   pos.x = Clamp(pos.x, 90.f, static_cast<float>(cfg::kScreenW) - 90.f);
 
@@ -85,13 +101,13 @@ void Boss::Update(World& w) {
     Player& p = w.GetPlayer();
     if (p.IsAlive() && Bounds().Overlaps(p.Bounds())) {
       const int dir = Sign(p.Bounds().Center().x - pos.x);
-      p.TakeDamage(w, DamageInfo{1.f, dir != 0 ? dir : 1});
+      p.TakeDamage(w, DamageInfo{1.f, dir != 0 ? dir : 1, false, false, "boss-body"});
     }
   }
 }
 
 void Boss::TakeDamage(World& w, const DamageInfo& info) {
-  if (invulnerable || dying) { w.Snd().Play(Sfx::BossHit); return; }
+  if (invulnerable || dying || Debug().immortal) { w.Snd().Play(Sfx::BossHit); return; }
   w.AddGauge(3.f);
   const float dmg = info.amount * damageMultiplier;
   hp_ -= dmg;

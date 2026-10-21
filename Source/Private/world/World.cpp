@@ -9,6 +9,7 @@
 #include "actor/enemy/Hound.h"
 #include "actor/enemy/Slime.h"
 #include "actor/pickup/Pickups.h"
+#include "core/DebugOptions.h"
 #include "core/Random.h"
 #include "core/Session.h"
 #include "data/PlayerStats.h"
@@ -20,6 +21,8 @@ namespace gengar {
 World::World(GameContext& ctx, int stageIndex)
     : ctx_(ctx), stage_(stageIndex), level_(BuildStage(stageIndex)) {
   player_ = Spawn<Player>(Vec2{2.f * cfg::kTile, 13.f * cfg::kTile}, stats::MaxHp(ctx_.session));
+  if (Debug().startHp > 0) player_->SetHp(Debug().startHp);
+  if (Debug().heartDemo) Spawn<Heart>(Vec2{3.f * cfg::kTile + 16.f, 14.f * cfg::kTile + 16.f});
   for (const SpawnPoint& sp : level_.Spawns()) {
     switch (sp.type) {
       case SpawnType::Slime: Spawn<Slime>(sp.pos, stage_); break;
@@ -28,7 +31,12 @@ World::World(GameContext& ctx, int stageIndex)
       case SpawnType::Caster: Spawn<Caster>(sp.pos, stage_); break;
       case SpawnType::Coin: Spawn<Coin>(sp.pos); break;
       case SpawnType::Heart: Spawn<Heart>(sp.pos); break;
-      case SpawnType::Boss: boss_ = Spawn<Boss>(sp.pos, cfg::kBossHp); break;
+      case SpawnType::Boss: {
+        const int hp = Debug().bossHp > 0 ? Debug().bossHp : cfg::kBossHp;
+        boss_ = Spawn<Boss>(sp.pos, hp);
+        if (Debug().bossPhase > 0) boss_->SetHealthRatio(Debug().bossPhase == 1 ? 0.6f : 0.25f);
+        break;
+      }
     }
   }
   ShowBanner(level_.Name(), 150);

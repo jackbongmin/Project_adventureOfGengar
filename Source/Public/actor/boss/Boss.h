@@ -37,16 +37,18 @@ class Boss : public Actor, public IDamageable {
   void ToFloat();                                // 떠 있는 기본 상태로 복귀 (플래그 초기화)
   void FloatMove();                              // 플레이어 주변을 떠다니는 이동
   void FireOrb(Vec2 from, float angle, float speed);
+  void FireHomingOrb(Vec2 from, float angle, float speed, float turnPerFrame, int lifeFrames);
   Vec2 PlayerCenter() const;
 
   int Hp() const { return static_cast<int>(hp_ + 0.999f); }
   int MaxHp() const { return static_cast<int>(maxHp_); }
+  void SetHealthRatio(float ratio) { hp_ = maxHp_ * Clamp(ratio, 0.01f, 1.f); }  // 디버그/튜닝용
   const char* AttackName() const { return attackName_; }
   int AttackNameTimer() const { return attackNameTimer_; }
 
   // 상태가 직접 조작하는 공개 필드
   bool invulnerable = false;     // 등장/순간이동 중 무적
-  bool contactEnabled = false;   // 몸통 접촉 피해 여부
+  bool contactEnabled = false;   // 몸통 접촉 피해 여부 (돌진/내려찍기 등 "몸으로 덮치는" 기술 중에만 true)
   bool dying = false;
   float alpha = 1.f;
   float charge = 0.f;            // 0~1 기 모으기 연출
@@ -56,6 +58,7 @@ class Boss : public Actor, public IDamageable {
 
  private:
   World* world_ = nullptr;
+  int sideDir_ = 1;  // 플레이어 기준 보스가 있는 쪽(+1 오른쪽, -1 왼쪽)
   StateMachine<Boss> machine_;
   float hp_;
   float maxHp_;
