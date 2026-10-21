@@ -20,6 +20,14 @@ inline float UltDamage(const Session& s) {
   return 6.f + static_cast<float>(s.Level(UpgradeId::Ult)) * 3.f + static_cast<float>(s.Level(UpgradeId::Power)) * 2.f;
 }
 inline float UltBossDamage(const Session& s) { return 20.f + static_cast<float>(s.Level(UpgradeId::Ult)) * 8.f; }
+// 공격 관련 업그레이드(위력/연사/다중 발사) 합계 레벨
+inline int OffenseLevels(const Session& s) {
+  return s.Level(UpgradeId::Power) + s.Level(UpgradeId::Rate) + s.Level(UpgradeId::Multi);
+}
+// 보스 체력: 기본 체력에 공격 업그레이드 1레벨당 12%를 더한다. (강화할수록 순식간에 녹는 것을 막는다)
+inline int BossMaxHp(const Session& s) {
+  return static_cast<int>(static_cast<float>(cfg::kBossHp) * (1.f + 0.12f * static_cast<float>(OffenseLevels(s))));
+}
 inline float GaugeMultiplier(const Session& s) { return 1.f + static_cast<float>(s.Level(UpgradeId::Ult)) * 0.25f; }
 
 }  // namespace gengar::stats

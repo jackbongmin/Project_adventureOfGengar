@@ -32,7 +32,7 @@ World::World(GameContext& ctx, int stageIndex)
       case SpawnType::Coin: Spawn<Coin>(sp.pos); break;
       case SpawnType::Heart: Spawn<Heart>(sp.pos); break;
       case SpawnType::Boss: {
-        const int hp = Debug().bossHp > 0 ? Debug().bossHp : cfg::kBossHp;
+        const int hp = Debug().bossHp > 0 ? Debug().bossHp : stats::BossMaxHp(ctx_.session);
         boss_ = Spawn<Boss>(sp.pos, hp);
         if (Debug().bossPhase > 0) boss_->SetHealthRatio(Debug().bossPhase == 1 ? 0.6f : 0.25f);
         break;
