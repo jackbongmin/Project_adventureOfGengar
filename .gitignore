@@ -66,3 +66,12 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Build outputs
+build/
+build-web/
+out/
+.vs/
+*.wasm
+.omc/
+build-web-single/
