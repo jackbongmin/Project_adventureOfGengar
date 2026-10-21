@@ -12,6 +12,7 @@ void PlayerController::Think(Character&, World& world, Intent& out) {
   out.jumpHeld = in.Down(Action::Jump);
   out.shoot = in.Down(Action::Shoot);
   out.ultimate = in.Pressed(Action::Ultimate);
+  out.dash = in.Pressed(Action::Dash);
 }
 
 }  // namespace gengar

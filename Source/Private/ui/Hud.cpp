@@ -25,7 +25,7 @@ void DrawHud(Graphics& g, const World& w, const Session& s) {
 
   const bool full = s.gauge >= 100.f;
   const float gx = 600.f, gw = 130.f;
-  g.Text(full ? "X ULT!" : "ULT", gx - 8.f, 15, 2, full ? Hex(0xffe27a) : Hex(0xb8a2dd), Align::Right);
+  g.Text(full ? "A ULT!" : "ULT", gx - 8.f, 15, 2, full ? Hex(0xffe27a) : Hex(0xb8a2dd), Align::Right);
   g.FillRect(gx - 2, 14, gw + 4, 18, Rgb(0, 0, 0, 180));
   const float t = static_cast<float>(w.Frame());
   g.FillRect(gx, 16, gw * s.gauge / 100.f, 14, full ? Hsl(290.f + std::sin(t * 0.2f) * 30.f, 1.f, 0.7f) : Hex(0x7b3fd0));

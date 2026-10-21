@@ -18,6 +18,15 @@
 #include "world/World.h"
 
 namespace gengar {
+namespace {
+
+constexpr int kDashFrames = 10;     // 약 0.17초
+constexpr float kDashSpeed = 11.f;  // 약 110px 이동 (타일 3.5칸)
+constexpr int kDashCooldown = 34;
+constexpr int kGhostLife = 12;
+
+}  // namespace
+
 Player::Player(Vec2 p, int maxHp) : Character(ActorKind::Player, p, {22.f, 30.f}, maxHp) {
   if (Debug().bot) SetController(std::make_unique<BotController>());
   else SetController(std::make_unique<PlayerController>());
@@ -34,17 +43,31 @@ void Player::Update(World& w) {
   const Vec2 feet{pos.x + size.x * 0.5f, pos.y + size.y};
   squash_.x += (1.f - squash_.x) * 0.2f;
   squash_.y += (1.f - squash_.y) * 0.2f;
+  for (Ghost& g : ghosts_) --g.life;
+  ghosts_.erase(std::remove_if(ghosts_.begin(), ghosts_.end(), [](const Ghost& g) { return g.life <= 0; }), ghosts_.end());
+
+  // ---- 대시 ----
+  if (onGround_) airDashUsed_ = false;
+  if (dashCooldown_ > 0) --dashCooldown_;
+  dashBuffer_ = intent_.dash ? 5 : std::max(0, dashBuffer_ - 1);
+  if (dashBuffer_ > 0 && TryStartDash(w)) dashBuffer_ = 0;
 
   // ---- 수평 이동 (가속/마찰) ----
   const float maxSpeed = stats::MoveSpeed(s);
-  if (intent_.moveX != 0.f) {
+  if (dashTimer_ > 0) {
+    --dashTimer_;
+    vel.x = static_cast<float>(dashDir_) * kDashSpeed;
+    vel.y = 0.f;
+    if (dashTimer_ % 2 == 0) ghosts_.push_back({{Bounds().Center().x, Bounds().Center().y - 7.f}, facing_, static_cast<float>(animFrame_), kGhostLife});
+    if (dashTimer_ == 0) vel.x = static_cast<float>(dashDir_) * maxSpeed;  // 끝나면 최고 속도로 이어 달린다
+  } else if (intent_.moveX != 0.f) {
     vel.x += intent_.moveX * 0.55f;
     SetFacing(Sign(intent_.moveX));
   } else {
     vel.x *= onGround_ ? 0.78f : 0.93f;
   }
-  vel.x = Clamp(vel.x, -maxSpeed, maxSpeed);
-  if (intent_.moveX == 0.f && std::fabs(vel.x) < 0.05f) vel.x = 0.f;
+  if (dashTimer_ == 0) vel.x = Clamp(vel.x, -maxSpeed, maxSpeed);
+  if (dashTimer_ == 0 && intent_.moveX == 0.f && std::fabs(vel.x) < 0.05f) vel.x = 0.f;
 
   // ---- 점프 (코요테 타임 + 입력 버퍼 + 가변 높이) ----
   jumpBuffer_ = intent_.jumpPressed ? 7 : std::max(0, jumpBuffer_ - 1);
@@ -54,13 +77,14 @@ void Player::Update(World& w) {
     jumpBuffer_ = 0;
     coyote_ = 0;
     onGround_ = false;
+    dashTimer_ = 0;  // 대시 중 점프: 대시를 끊고 뛰어오른다
     w.Snd().Play(Sfx::Jump);
     w.Fx().Dust(feet, 6);
     squash_ = {0.75f, 1.3f};  // 위로 쭉 늘어난다
   }
   if (!intent_.jumpHeld && vel.y < -3.5f) vel.y *= 0.8f;
 
-  vel.y = std::min(vel.y + cfg::kGravity, cfg::kMaxFall);
+  if (dashTimer_ == 0) vel.y = std::min(vel.y + cfg::kGravity, cfg::kMaxFall);  // 대시 중에는 수평으로 곧게
   MoveAndCollide(w);
   if (pos.y > static_cast<float>(cfg::kRows * cfg::kTile) + 40.f) { Defeat(w); return; }
 
@@ -95,6 +119,22 @@ void Player::LatchInput(World& w) {
   controller_->Think(*this, w, in);
   if (in.jumpPressed) jumpBuffer_ = 8;  // Update에서 1 줄어든 뒤 평소 버퍼(7)와 같아진다
   if (in.ultimate) ultQueued_ = true;
+  if (in.dash) dashBuffer_ = 6;
+}
+
+bool Player::TryStartDash(World& w) {
+  if (dashTimer_ > 0 || dashCooldown_ > 0 || (!onGround_ && airDashUsed_)) return false;
+  dashDir_ = intent_.moveX != 0.f ? Sign(intent_.moveX) : facing_;
+  SetFacing(dashDir_);
+  dashTimer_ = kDashFrames;
+  dashCooldown_ = kDashCooldown;
+  if (!onGround_) airDashUsed_ = true;
+  squash_ = {1.4f, 0.75f};  // 옆으로 쭉 늘어난다
+  const Vec2 feet{pos.x + size.x * 0.5f, pos.y + size.y};
+  if (onGround_) w.Fx().Dust(feet, 6, -static_cast<float>(dashDir_) * 1.5f);
+  else w.Fx().Burst(Bounds().Center(), 6, Hex(0xc58bff), 2.f, 14.f);
+  w.Snd().Tone(260.f, 820.f, 0.12f, Wave::Saw, 0.06f);
+  return true;
 }
 
 void Player::Shoot(World& w) {
@@ -156,6 +196,7 @@ void Player::CheckHazards(World& w) {
 
 void Player::TakeDamage(World& w, const DamageInfo& info) {
   if (invuln_ > 0 || defeated_) return;
+  if (dashTimer_ > 0) return;  // 대시로 회피
   if (Debug().god) {  // 검증용 무적: 피격은 무시하되 출처를 기록한다
     invuln_ = 20;
     DebugLog("[player] hit by %s (ignored: god)", info.source);
@@ -186,6 +227,9 @@ void Player::Defeat(World& w) {
 
 void Player::Render(Graphics& gfx, const World&) {
   if (defeated_) return;
+  for (const Ghost& g : ghosts_) {  // 대시 잔상: 오래된 것일수록 옅게
+    DrawPhantom(gfx, g.center, g.facing, g.time, 1.f, 0.45f * static_cast<float>(g.life) / static_cast<float>(kGhostLife));
+  }
   if (invuln_ > 0 && (invuln_ / 4) % 2) return;  // 무적 깜빡임
   const Vec2 c = Bounds().Center();
   PhantomStyle style;

@@ -11,6 +11,7 @@ struct Intent {
   bool jumpHeld = false;     // 점프 키 유지 (가변 점프)
   bool shoot = false;        // 공격
   bool ultimate = false;     // 필살기
+  bool dash = false;         // 대시 시작
   Vec2 aim;                  // 조준 방향 (단위 벡터, 원거리 공격용)
   Vec2 flyVel;               // 비행 액터의 목표 속도
 };
