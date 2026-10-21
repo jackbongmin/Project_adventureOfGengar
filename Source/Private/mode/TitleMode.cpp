@@ -13,7 +13,8 @@ namespace gengar {
 
 void TitleMode::Update(Game& game) {
   ++frame_;
-  if (game.In().Pressed(Action::Confirm) || (Debug().bot && frame_ > 30)) game.StartNewRun();  // bot=1 이면 자동 시작
+  if (Debug().bot && frame_ > 30) game.StartNewRun();  // bot=1 이면 시네마틱 없이 자동 시작
+  else if (game.In().Pressed(Action::Confirm)) game.GoIntro();
   if (game.In().Pressed(Action::Gallery)) game.GoGallery();
 }
 
@@ -27,8 +28,8 @@ void TitleMode::Render(Graphics& g) {
   DrawPhantom(g, {W * 0.5f, 190.f}, 1, static_cast<float>(frame_), 3.2f);
   g.Text("ADVENTURE OF GENGAR", W * 0.5f, 292, 6, Hex(0xd9b8ff), Align::Center);
   g.Text("THE LORD OF THE VOID AWAITS", W * 0.5f, 350, 2, Hex(0xffffff), Align::Center);
-  g.Text("< > MOVE   C JUMP   Z SHADOW BALL   X ULTIMATE   ESC PAUSE", W * 0.5f, 418, 2, Hex(0xc9b0ee), Align::Center);
-  g.Text("(SPACE / UP ALSO JUMP. KILL ENEMIES TO CHARGE THE ULT GAUGE)", W * 0.5f, 442, 2, Hex(0x9a82c0), Align::Center);
+  g.Text("< > MOVE   C JUMP   Z SHOT   X DASH   A ULTIMATE   ESC PAUSE", W * 0.5f, 418, 2, Hex(0xc9b0ee), Align::Center);
+  g.Text("(SPACE / UP ALSO JUMP, SHIFT ALSO DASH. DASH DODGES ATTACKS!)", W * 0.5f, 442, 2, Hex(0x9a82c0), Align::Center);
   if ((frame_ / 30) % 2 == 0) g.Text("PRESS ENTER TO START", W * 0.5f, 490, 3, Hex(0xffe27a), Align::Center);
 }
 

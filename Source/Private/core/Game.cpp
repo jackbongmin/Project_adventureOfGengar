@@ -10,6 +10,7 @@
 #include "core/Config.h"
 #include "core/DebugOptions.h"
 #include "mode/GameOverMode.h"
+#include "mode/IntroMode.h"
 #include "mode/PlayMode.h"
 #include "mode/ShopMode.h"
 #include "mode/SpriteGalleryMode.h"
@@ -83,6 +84,7 @@ void Game::Run() {
 }
 
 void Game::GoTitle() { ChangeMode(std::make_unique<TitleMode>()); }
+void Game::GoIntro() { ChangeMode(std::make_unique<IntroMode>()); }
 
 void Game::StartNewRun() {
   session_.Reset();

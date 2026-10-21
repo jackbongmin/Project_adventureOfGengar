@@ -20,7 +20,7 @@ void ShopMode::Update(Game& game) {
 
   if (Debug().bot) {  // 검증용: 60프레임마다 살 수 있는 가장 좋은 업그레이드를 사고, 더 살 게 없으면 출발한다.
     if (frame_ % 60 == 0) {
-      static const UpgradeId priority[] = {UpgradeId::Multi, UpgradeId::Power, UpgradeId::Rate, UpgradeId::MaxHp, UpgradeId::Ult, UpgradeId::Jump, UpgradeId::Speed, UpgradeId::Life};
+      static const UpgradeId priority[] = {UpgradeId::Multi, UpgradeId::Power, UpgradeId::Rate, UpgradeId::MaxHp, UpgradeId::Ult, UpgradeId::DoubleJump, UpgradeId::Speed, UpgradeId::Life};
       Session& s = game.Sess();
       bool bought = false;
       for (UpgradeId id : priority) {
@@ -109,7 +109,7 @@ void ShopMode::Render(Graphics& g) {
       "SHOTS     " + std::to_string(stats::ShotCount(s)),
       "FIRE DELAY " + std::to_string(stats::FireCooldown(s)) + "F",
       "MAX HEART " + std::to_string(stats::MaxHp(s)),
-      "JUMP      LV." + std::to_string(s.Level(UpgradeId::Jump)),
+      std::string("DBL JUMP  ") + (stats::AirJumps(s) > 0 ? "YES" : "NO"),
       "SPEED     LV." + std::to_string(s.Level(UpgradeId::Speed)),
       "ULT       LV." + std::to_string(s.Level(UpgradeId::Ult)),
       "LIVES     " + std::to_string(s.lives),

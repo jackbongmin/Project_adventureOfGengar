@@ -25,7 +25,7 @@ void DrawHud(Graphics& g, const World& w, const Session& s) {
 
   const bool full = s.gauge >= 100.f;
   const float gx = 600.f, gw = 130.f;
-  g.Text(full ? "X ULT!" : "ULT", gx - 8.f, 15, 2, full ? Hex(0xffe27a) : Hex(0xb8a2dd), Align::Right);
+  g.Text(full ? "A ULT!" : "ULT", gx - 8.f, 15, 2, full ? Hex(0xffe27a) : Hex(0xb8a2dd), Align::Right);
   g.FillRect(gx - 2, 14, gw + 4, 18, Rgb(0, 0, 0, 180));
   const float t = static_cast<float>(w.Frame());
   g.FillRect(gx, 16, gw * s.gauge / 100.f, 14, full ? Hsl(290.f + std::sin(t * 0.2f) * 30.f, 1.f, 0.7f) : Hex(0x7b3fd0));
@@ -49,6 +49,21 @@ void DrawHud(Graphics& g, const World& w, const Session& s) {
         g.SetGlobalAlpha(1.f);
       }
     }
+  }
+
+  // 콤보: 오른쪽 위. 오를 때 글자가 커졌다 돌아오고, 남은 시간 막대가 줄어든다.
+  if (w.Combo() >= 2) {
+    const int combo = w.Combo();
+    const float x = kW - 20.f, y = 56.f;
+    const float left = static_cast<float>(w.ComboTimer()) / static_cast<float>(World::kComboFrames);
+    const Color c = combo >= 10 ? Hsl(std::fmod(t * 6.f, 360.f), 1.f, 0.7f) : combo >= 5 ? Hex(0xffb347) : Hex(0xffe27a);
+    g.SetGlobalAlpha(std::min(1.f, left * 4.f));
+    g.Text(std::to_string(combo) + " COMBO", x, y, w.ComboPop() > 6 ? 4 : 3, c, Align::Right);
+    if (w.ComboMultiplier() > 1) g.Text("SCORE x" + std::to_string(w.ComboMultiplier()), x, y + 32.f, 2, Hex(0xffffff), Align::Right);
+    constexpr float bw = 120.f;
+    g.FillRect(x - bw, y + 50.f, bw, 4, Rgb(0, 0, 0, 160));
+    g.FillRect(x - bw, y + 50.f, std::floor(bw * left / 2.f) * 2.f, 4, c);
+    g.SetGlobalAlpha(1.f);
   }
 
   if (w.BannerTimer() > 0) {

@@ -13,6 +13,7 @@ class Effects {
  public:
   void Burst(Vec2 p, int count, Color color, float speed = 3.f, float life = 30.f);
   void Trail(Vec2 p, Color color, float size, float life);
+  void Dust(Vec2 feet, int count, float pushX = 0.f);  // 발밑 먼지 (점프/착지/달리기/급정거)
   void Pop(Vec2 p, const std::string& text, Color color = Color{});
   void AddRing(Vec2 center);
   void AddChunk(Vec2 topLeft);  // 무너지는 발판 조각

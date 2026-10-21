@@ -1,11 +1,15 @@
 #include "state/play/PlayPhases.h"
 
+#include <algorithm>
+#include <cmath>
+
 #include "actor/Player.h"
 #include "core/Config.h"
 #include "core/DebugOptions.h"
 #include "core/Session.h"
 #include "core/Game.h"
 #include "platform/Graphics.h"
+#include "platform/Audio.h"
 #include "platform/Input.h"
 
 namespace gengar {
@@ -25,7 +29,7 @@ class PlayingPhase : public PlayPhase {
     world.Update();
 
     if (!world.GetPlayer().IsAlive()) m.Phase().Change(MakePlayerDeadPhase());
-    else if (world.BossDefeated()) game.GoVictory();
+    else if (world.HatCollected()) m.Phase().Change(MakeHatGetPhase());
     else if (world.StageCleared()) m.Phase().Change(MakeStageClearPhase());
   }
 };
@@ -79,11 +83,39 @@ class StageClearPhase : public PlayPhase {
   int t_ = 0;
 };
 
+// 보물 모자를 되찾음: 모자를 쓰고 기뻐하는 모습을 잠깐 보여 준 뒤 엔딩 시네마틱으로.
+class HatGetPhase : public PlayPhase {
+ public:
+  const char* Name() const override { return "HatGet"; }
+  void Enter(PlayMode& m) override {
+    m.GetWorld().GetPlayer().SetWearingHat(true);
+    m.GetWorld().Snd().Play(Sfx::StageClear);
+  }
+  void Update(PlayMode& m) override {
+    ++t_;
+    m.GetWorld().UpdateEffects();
+    if (t_ > 150) m.GetGame().GoVictory();
+  }
+  void Render(PlayMode& m, Graphics& g) override {
+    const World& w = m.GetWorld();
+    const Vec2 pc = w.GetPlayer().Bounds().Center();
+    const float k = std::min(1.f, static_cast<float>(t_) / 30.f);
+    g.Glow(pc.x - w.Cam().x, pc.y - 20.f, 90.f + 20.f * std::sin(static_cast<float>(t_) * 0.15f), Rgb(255, 226, 122, static_cast<int>(70.f * k)));
+    const int size = t_ < 12 ? 4 + t_ / 3 : 7;  // 살짝 튀어나오는 글자
+    g.Text("TREASURE HAT GET!", kW * 0.5f, 150, size, Hex(0xffe27a), Align::Center);
+    if (t_ > 120) g.FillRect(0, 0, kW, kH, Rgb(0, 0, 0, static_cast<int>(std::min(1.f, static_cast<float>(t_ - 120) / 30.f) * 255)));
+  }
+
+ private:
+  int t_ = 0;
+};
+
 }  // namespace
 
 std::unique_ptr<PlayPhase> MakePlayingPhase() { return std::make_unique<PlayingPhase>(); }
 std::unique_ptr<PlayPhase> MakePausedPhase() { return std::make_unique<PausedPhase>(); }
 std::unique_ptr<PlayPhase> MakePlayerDeadPhase() { return std::make_unique<PlayerDeadPhase>(); }
 std::unique_ptr<PlayPhase> MakeStageClearPhase() { return std::make_unique<StageClearPhase>(); }
+std::unique_ptr<PlayPhase> MakeHatGetPhase() { return std::make_unique<HatGetPhase>(); }
 
 }  // namespace gengar

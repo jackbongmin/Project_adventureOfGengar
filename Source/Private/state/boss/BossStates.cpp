@@ -6,6 +6,7 @@
 #include "actor/enemy/Bat.h"
 #include "actor/enemy/Enemy.h"
 #include "actor/hazard/PillarHazard.h"
+#include "actor/pickup/Pickups.h"
 #include "actor/projectile/Shockwave.h"
 #include "core/Config.h"
 #include "core/DebugOptions.h"
@@ -419,7 +420,63 @@ class LungeState : public BossStateBase {
   bool onFloor_ = false;
 };
 
-// 사망: 연쇄 폭발 후 사라지며 스테이지 클리어(보스 격파)를 알린다
+// 십자포화: 양쪽 벽에서 가로 탄 줄이 번갈아 날아온다. 줄마다 한 칸은 비어 있어 그 틈으로 지나가면 된다.
+class CrossfireState : public BossStateBase {
+ public:
+  const char* Name() const override { return "Crossfire"; }
+  void Update(Boss& b) override {
+    ++t_;
+    const BossTuning& T = Tuning(b.Phase());
+    constexpr int kFirst = 30, kGap = 42;
+    constexpr float kRowGap = 52.f;
+    b.FloatMove();
+    b.charge = t_ < kFirst ? static_cast<float>(t_) / static_cast<float>(kFirst) : 0.f;
+    if (t_ >= kFirst && (t_ - kFirst) % kGap == 0 && (t_ - kFirst) / kGap < T.crossWaves) {
+      const int wave = (t_ - kFirst) / kGap;
+      const bool fromLeft = wave % 2 == 0;
+      const float top = kGroundY - 30.f - kRowGap * static_cast<float>(T.crossRows - 1);
+      const int hole = RandInt(0, T.crossRows - 1);
+      for (int i = 0; i < T.crossRows; ++i) {
+        if (i == hole) continue;
+        b.FireOrb({fromLeft ? -20.f : kW + 20.f, top + kRowGap * static_cast<float>(i)}, fromLeft ? 0.f : kPi, T.crossSpeed);
+      }
+      b.GetWorld().Snd().Play(Sfx::BossShoot);
+    }
+    if (t_ >= kFirst + (T.crossWaves - 1) * kGap + 50) b.ToFloat();
+  }
+};
+
+// 허공 휩쓸기: 조준한 방향을 중심으로 탄 다발이 좌우로 부채꼴을 훑는다.
+class SweepState : public BossStateBase {
+ public:
+  const char* Name() const override { return "Sweep"; }
+  void Update(Boss& b) override {
+    ++t_;
+    const BossTuning& T = Tuning(b.Phase());
+    constexpr int kStart = 26;
+    b.FloatMove();
+    b.charge = t_ < kStart ? static_cast<float>(t_) / static_cast<float>(kStart) : 0.f;
+    if (t_ == kStart) {
+      const Vec2 pc = b.PlayerCenter();
+      center_ = std::atan2(pc.y - b.pos.y, pc.x - b.pos.x);
+    }
+    if (t_ >= kStart && t_ < kStart + T.sweepFrames && (t_ - kStart) % T.sweepInterval == 0) {
+      const float phase = static_cast<float>(t_ - kStart) / static_cast<float>(T.sweepFrames) * 2.f * kPi;
+      const float base = center_ + std::sin(phase) * T.sweepArc;
+      for (int i = 0; i < T.sweepCount; ++i) {
+        b.FireOrb(b.pos, base + (static_cast<float>(i) - static_cast<float>(T.sweepCount - 1) / 2.f) * 0.3f, T.sweepSpeed);
+      }
+      if ((t_ - kStart) % 20 == 0) b.GetWorld().Snd().Play(Sfx::BossShoot);
+    }
+    if (t_ >= kStart + T.sweepFrames + 30) b.ToFloat();
+  }
+
+ private:
+  float center_ = 0.f;
+};
+
+// 사망: 연쇄 폭발 -> 쥐고 있던 보물 모자를 플레이어 쪽으로 내밀어 놓아준다 -> 흩어지며 사라진다.
+// 완전히 사라진 뒤 보스 격파를 알리고, 모자를 주우면 엔딩으로 넘어간다 (TreasureHat).
 class DyingState : public BossStateBase {
  public:
   const char* Name() const override { return "Dying"; }
@@ -429,15 +486,43 @@ class DyingState : public BossStateBase {
   void Update(Boss& b) override {
     ++t_;
     World& w = b.GetWorld();
-    w.Fx().Shake(6.f);
-    b.pos.y += 0.3f;
-    if (t_ % 6 == 0) {
-      const Color colors[3] = {Hex(0xffb0ff), Hex(0xff6aa0), Hex(0xffffff)};
-      w.Fx().Burst({b.pos.x + RandRange(-50.f, 50.f), b.pos.y + RandRange(-50.f, 50.f)}, 14, colors[(t_ / 6) % 3], 5.f, 40.f);
-      w.Snd().Tone(RandRange(80.f, 200.f), RandRange(40.f, 80.f), 0.2f, Wave::Saw, 0.05f);
+    if (t_ <= kExplodeEnd) {
+      w.Fx().Shake(6.f);
+      b.pos.y += 0.3f;
+      if (t_ % 6 == 0) {
+        const Color colors[3] = {Hex(0xffb0ff), Hex(0xff6aa0), Hex(0xffffff)};
+        w.Fx().Burst({b.pos.x + RandRange(-50.f, 50.f), b.pos.y + RandRange(-50.f, 50.f)}, 14, colors[(t_ / 6) % 3], 5.f, 40.f);
+        w.Snd().Tone(RandRange(80.f, 200.f), RandRange(40.f, 80.f), 0.2f, Wave::Saw, 0.05f);
+      }
+      if (t_ == kExplodeEnd) {
+        w.Fx().Burst(b.pos, 60, Hex(0xffd0ff), 8.f, 60.f);
+        w.Fx().Pop({b.pos.x, b.pos.y - 80.f}, "...TAKE IT BACK.", Hex(0xffe27a));
+        // 플레이어 쪽으로, 화면 안쪽에 모자를 내민다
+        const Vec2 pc = b.PlayerCenter();
+        const float dir = pc.x < b.pos.x ? -1.f : 1.f;
+        b.handTarget = {Clamp(b.pos.x + dir * 120.f, 80.f, kW - 80.f), b.pos.y + 10.f};
+      }
+      return;
     }
-    if (t_ > 140) {
-      w.Fx().Burst(b.pos, 80, Hex(0xffd0ff), 9.f, 70.f);
+    if (t_ <= kRelease) {  // 손을 뻗어 모자를 내민다
+      b.handReach = EaseOut(static_cast<float>(t_ - kExplodeEnd) / static_cast<float>(kRelease - kExplodeEnd));
+      if (t_ == kRelease) {
+        const Vec2 h = b.HatHandPos();
+        b.holdingHat = false;
+        w.Spawn<TreasureHat>(Vec2{h.x, h.y + 16.f});
+        w.Snd().Play(Sfx::Heart);
+        DebugLog("[boss] released the treasure hat");
+      }
+      return;
+    }
+    // 흩어지며 사라진다
+    const float k = static_cast<float>(t_ - kRelease) / static_cast<float>(kVanish - kRelease);
+    b.handReach = 1.f - k;
+    b.alpha = 1.f - k;
+    b.pos.y -= 0.4f;
+    if (t_ % 4 == 0) w.Fx().Burst({b.pos.x + RandRange(-50.f, 50.f), b.pos.y + RandRange(-40.f, 50.f)}, 3, Hex(0xb46cff), 1.5f, 50.f);
+    if (t_ >= kVanish) {
+      w.Fx().Burst(b.pos, 40, Hex(0xffd0ff), 6.f, 60.f);
       Session& s = w.Sess();
       s.score += 5000 + s.lives * 1000 + w.GetPlayer().Hp() * 200;
       DebugLog("[boss] DEFEATED");
@@ -445,6 +530,10 @@ class DyingState : public BossStateBase {
       b.Kill();
     }
   }
+
+ private:
+  static constexpr int kExplodeEnd = 140, kRelease = 190, kVanish = 260;
+  static float EaseOut(float k) { k = Clamp(k, 0.f, 1.f); return 1.f - (1.f - k) * (1.f - k); }
 };
 
 }  // namespace
@@ -467,6 +556,8 @@ std::unique_ptr<BossState> MakeBossAttackState(BossAttack attack) {
     case BossAttack::Spiral: return std::make_unique<SpiralState>();
     case BossAttack::Homing: return std::make_unique<HomingState>();
     case BossAttack::Lunge: return std::make_unique<LungeState>();
+    case BossAttack::Crossfire: return std::make_unique<CrossfireState>();
+    case BossAttack::Sweep: return std::make_unique<SweepState>();
   }
   return std::make_unique<FloatState>();
 }

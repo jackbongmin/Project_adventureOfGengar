@@ -684,4 +684,85 @@ const std::vector<std::string>& BossHand() {
   return rows;
 }
 
+// ---- 시네마틱용: 행복한 표정(눈웃음 + 볼터치), 팬텀의 보물 모자 ----
+const std::vector<std::string>& PhantomHappy0() {
+  static const std::vector<std::string> rows = {
+      ".....o...........oo.....",
+      "....olo.........oppo....",
+      "....ollo.......opppo....",
+      "....olllo.....oppppo....",
+      "...oollllooooopppppo....",
+      ".ooddllllppppppppppo....",
+      "oddddlllpppppppppppo....",
+      ".odddllppppppppppppo....",
+      "..oollppppppppppppppo...",
+      "..ollpppkkpppppkkppppo..",
+      "..olpppkppkpppkppkpppo..",
+      "..oppppppppppppppppppo..",
+      ".odppbbppppppppppbbppo..",
+      "oddppkpppppppppppppkdo..",
+      ".oppppkkkkkkkkkkkkkdddo.",
+      ".oppppkwwkwwkwwkwwkdddo.",
+      ".opppppkwkwwkwwkwkddddo.",
+      ".oppppppkwwwwwwwkdddddo.",
+      "..oppppppkkkkkkkdddddo..",
+      ".oddddppppppdddddddoo...",
+      "..oddddppppdddddddo.....",
+      "...ooooppooooooodo......",
+      ".......oo......odo......",
+      "................o.......",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& PhantomHappy1() {
+  static const std::vector<std::string> rows = {
+      ".....o...........oo.....",
+      "....olo.........oppo....",
+      "....ollo.......opppo....",
+      "....olllo.....oppppo....",
+      "...oollllooooopppppo....",
+      ".ooddllllppppppppppo....",
+      "oddddlllpppppppppppo....",
+      ".odddllppppppppppppo....",
+      "..oollppppppppppppppo...",
+      "..ollpppkkpppppkkppppo..",
+      "..olpppkppkpppkppkpppo..",
+      "..oppppppppppppppppppo..",
+      ".odppbbppppppppppbbppo..",
+      "oddppkpppppppppppppkdo..",
+      ".oppppkkkkkkkkkkkkkdddo.",
+      ".oppppkwwkwwkwwkwwkdddo.",
+      ".opppppkwkwwkwwkwkddddo.",
+      ".oppppppkwwwwwwwkdddddo.",
+      "..oppppppkkkkkkkdddddo..",
+      ".oddddppppppddddddooo...",
+      "..oddddppppddddddo......",
+      "...oooodoooddoooo.......",
+      ".......o...oo...........",
+      "........................",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& TreasureHat() {
+  static const std::vector<std::string> rows = {
+      "...oooooooooo...",
+      "...obbbbbbBBo...",
+      "...obbbbbbBBo...",
+      "...obbbbbbBBo...",
+      "...obbbbbbBBo...",
+      "...oyyyrryyyo...",
+      "...oyyrwrryyo...",
+      "...odddrrdddo...",
+      "...obbbbbbBBo...",
+      ".ooobbbbbbBBooo.",
+      "oyyyyyyyyyyyyyyo",
+      "ohhyyyyyyyyyyydo",
+      ".oddddddddddddo.",
+      "..oooooooooooo..",
+  };
+  return rows;
+}
+
 }  // namespace gengar::art::data

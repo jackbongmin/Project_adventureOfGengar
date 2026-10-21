@@ -220,6 +220,15 @@ void Graphics::DrawSprite(SpriteId id, float x, float y, int scale, bool flipX, 
   SDL_RenderCopyExF(renderer_, t, nullptr, &dst, 0.0, nullptr, flipX ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
 }
 
+void Graphics::DrawSpriteSized(SpriteId id, float x, float y, float w, float h, bool flipX, float alpha) {
+  if (id < 0 || id >= static_cast<SpriteId>(sprites_.size())) return;
+  SDL_Texture* t = sprites_[static_cast<size_t>(id)].tex;
+  if (!t) return;
+  SDL_SetTextureAlphaMod(t, static_cast<Uint8>(Clamp(alpha * galpha_, 0.f, 1.f) * 255.f));
+  const SDL_FRect dst{std::floor(x - ox_), std::floor(y - oy_), std::round(w), std::round(h)};
+  SDL_RenderCopyExF(renderer_, t, nullptr, &dst, 0.0, nullptr, flipX ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+}
+
 void Graphics::PixelLine(Vec2 a, Vec2 b, float thickness, Color c, float grid) {
   const float dx = b.x - a.x, dy = b.y - a.y, len = std::sqrt(dx * dx + dy * dy);
   const int steps = std::max(1, static_cast<int>(len / grid));

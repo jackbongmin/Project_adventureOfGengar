@@ -59,9 +59,12 @@ void Enemy::TakeDamage(World& w, const DamageInfo& info) {
   const Vec2 c = Bounds().Center();
   w.Fx().Pop({c.x, pos.y}, "-" + std::to_string(dmg));
   w.Snd().Play(Sfx::EnemyHit);
-  if (hp_ > 0) return;
+  if (hp_ > 0) { w.HitStop(2); return; }
 
-  w.AddScore(100);
+  w.HitStop(5);
+  w.Fx().Shake(3.f);
+  const int mult = w.RegisterKill(c);
+  w.AddScore(100 * mult);
   w.AddCoins(3);
   w.Fx().Burst(c, 18, DeathColor(), 4.f);
   w.Fx().Pop({c.x, pos.y - 12.f}, "+3", Hex(0xffe27a));

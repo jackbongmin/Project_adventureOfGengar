@@ -33,6 +33,12 @@ struct BossTuning {
   float dashSpeed = 0;
   int slamWindup = 0, slamRest = 0;                    // 내려찍기: 준비 시간 / 빈틈
   float slamWaveSpeed = 0;
+
+  // 새 원거리 패턴
+  int crossRows = 0, crossWaves = 0;                   // 십자포화: 한 번에 날아오는 줄 수 / 연속 횟수 (양쪽 벽에서 엇갈려 발사)
+  float crossSpeed = 0;
+  int sweepFrames = 0, sweepInterval = 0, sweepCount = 0;  // 허공 휩쓸기: 지속 시간 / 발사 간격 / 한 번에 쏘는 수
+  float sweepSpeed = 0, sweepArc = 0;                  // 탄 속도 / 좌우로 훑는 각도 폭(rad)
 };
 
 const BossTuning& Tuning(int phase);  // phase 0~2
