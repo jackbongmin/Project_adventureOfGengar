@@ -31,6 +31,7 @@ class Game {
 
   // ---- 화면(모드) 전환 ----
   void GoTitle();
+  void GoIntro();                     // 오프닝 시네마틱 -> 새 게임
   void StartNewRun();                 // 새 게임 시작 (스테이지 1)
   void StartStage(bool retry);        // 현재 session.stage 시작. retry면 스냅샷을 갱신하지 않는다.
   void GoShop();                      // 스테이지 클리어 후 상점

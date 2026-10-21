@@ -18,6 +18,7 @@ class Player : public Character {
   void Heal(int n) { hp_ = std::min(maxHp_, hp_ + n); }
   void SetHp(int hp) { hp_ = Clamp(hp, 1, maxHp_); }  // 디버그용
   void Bounce(float vy) { vel.y = vy; onGround_ = false; }  // 적을 밟은 반동
+  void SetWearingHat(bool on) { wearingHat_ = on; }  // 보물 모자를 되찾은 뒤 (모자 + 행복한 표정)
 
  private:
   void Defeat(World& world);
@@ -33,6 +34,7 @@ class Player : public Character {
   int animFrame_ = 0;
   bool defeated_ = false;
   int defeatedTimer_ = 0;
+  bool wearingHat_ = false;
 };
 
 }  // namespace gengar

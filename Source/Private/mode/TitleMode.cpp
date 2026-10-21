@@ -13,7 +13,8 @@ namespace gengar {
 
 void TitleMode::Update(Game& game) {
   ++frame_;
-  if (game.In().Pressed(Action::Confirm) || (Debug().bot && frame_ > 30)) game.StartNewRun();  // bot=1 이면 자동 시작
+  if (Debug().bot && frame_ > 30) game.StartNewRun();  // bot=1 이면 시네마틱 없이 자동 시작
+  else if (game.In().Pressed(Action::Confirm)) game.GoIntro();
   if (game.In().Pressed(Action::Gallery)) game.GoGallery();
 }
 

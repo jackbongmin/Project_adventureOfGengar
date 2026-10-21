@@ -3,6 +3,7 @@
 #include <cmath>
 #include <string>
 
+#include "actor/PhantomArt.h"
 #include "actor/Player.h"
 #include "actor/enemy/Enemy.h"
 #include "actor/projectile/EnemyOrb.h"
@@ -28,6 +29,12 @@ Boss::Boss(Vec2 center, int maxHp) : Actor(ActorKind::Boss), machine_(*this), hp
 float Boss::PhaseSpeed() const { return Tuning(phase_).moveSpeed; }
 
 Vec2 Boss::PlayerCenter() const { return world_->GetPlayer().Bounds().Center(); }
+
+Vec2 Boss::HatHandPos() const {
+  const float t = static_cast<float>(tick_);
+  const Vec2 rest{pos.x + 98.f + std::sin(t * 0.05f + 1.f) * 8.f, pos.y + 30.f + std::cos(t * 0.06f + 1.f) * 10.f};
+  return {rest.x + (handTarget.x - rest.x) * handReach, rest.y + (handTarget.y - rest.y) * handReach};
+}
 
 void Boss::ToFloat() {
   charge = 0.f;
@@ -143,10 +150,15 @@ void Boss::Render(Graphics& g, const World&) {
     g.FillRect(x + 2, y + 2, 4, 4, Hex(0xffffff));
   }
 
-  // 떠다니는 손
+  // 떠다니는 손 (오른손에는 훔친 모자)
   for (int s = -1; s <= 1; s += 2) {
     const float k = static_cast<float>(s);
-    const float hx = pos.x + k * (98.f + std::sin(t * 0.05f + k) * 8.f), hy = pos.y + 30.f + std::cos(t * 0.06f + k) * 10.f;
+    float hx = pos.x + k * (98.f + std::sin(t * 0.05f + k) * 8.f), hy = pos.y + 30.f + std::cos(t * 0.06f + k) * 10.f;
+    if (s > 0) {
+      const Vec2 h = HatHandPos();
+      hx = h.x; hy = h.y;
+      if (holdingHat) DrawTreasureHat(g, {hx, hy + 44.f}, 1.f, dying ? 0.8f : 0.3f, t);  // 손끝에 꼭대기만 쥐고 아래로 매달린 모습
+    }
     const SpriteId hand = a.bossHand[phase_];
     const Vec2 hs = g.SpriteSize(hand);
     g.DrawSprite(hand, std::floor(hx - hs.x * ps * 0.5f), std::floor(hy - hs.y * ps * 0.5f), ps, s < 0);

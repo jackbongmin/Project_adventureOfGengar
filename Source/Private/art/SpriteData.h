@@ -37,5 +37,8 @@ const std::vector<std::string>& TileCrumble();
 const std::vector<std::string>& TileSpike();
 const std::vector<std::string>& Boss();
 const std::vector<std::string>& BossHand();
+const std::vector<std::string>& PhantomHappy0();
+const std::vector<std::string>& PhantomHappy1();
+const std::vector<std::string>& TreasureHat();
 
 }  // namespace gengar::art::data

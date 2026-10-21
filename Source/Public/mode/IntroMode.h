@@ -1,0 +1,22 @@
+#pragma once
+// 오프닝 시네마틱: VOIDMAW가 팬텀의 보물 모자를 훔쳐 달아난다. 끝나면 새 게임을 시작한다.
+// Enter/Z = 다음 장면, C 꾹 = 전체 건너뛰기.
+#include "mode/Cutscene.h"
+#include "mode/GameMode.h"
+
+namespace gengar {
+
+class IntroMode : public GameMode {
+ public:
+  void Update(Game& game) override;
+  void Render(Graphics& gfx) override;
+
+ private:
+  bool Crossed(int frame) const { return prev_ < frame && t_ >= frame; }  // 이번 스텝에 frame을 지났는가 (장면 건너뛰기에도 안전)
+
+  int t_ = 0;
+  int prev_ = -1;
+  SkipHold skip_;
+};
+
+}  // namespace gengar

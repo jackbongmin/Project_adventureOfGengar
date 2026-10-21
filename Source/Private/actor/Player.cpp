@@ -154,7 +154,10 @@ void Player::Render(Graphics& gfx, const World&) {
   if (defeated_) return;
   if (invuln_ > 0 && (invuln_ / 4) % 2) return;  // 무적 깜빡임
   const Vec2 c = Bounds().Center();
-  DrawPhantom(gfx, {c.x, c.y - 7.f}, facing_, static_cast<float>(animFrame_));  // 스프라이트 발끝을 히트박스 바닥에 맞춘다
+  PhantomStyle style;
+  style.happy = style.hat = wearingHat_;
+  style.hatGlow = wearingHat_ ? 1.f : 0.f;
+  DrawPhantom(gfx, {c.x, c.y - 7.f}, facing_, static_cast<float>(animFrame_), 1.f, 1.f, style);  // 스프라이트 발끝을 히트박스 바닥에 맞춘다
 }
 
 }  // namespace gengar

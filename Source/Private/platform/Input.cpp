@@ -20,6 +20,7 @@ const std::array<std::vector<SDL_Scancode>, static_cast<size_t>(Action::Count)>&
       {SDL_SCANCODE_RETURN, SDL_SCANCODE_KP_ENTER, SDL_SCANCODE_Z},  // Confirm
       {SDL_SCANCODE_ESCAPE, SDL_SCANCODE_P},                         // Pause
       {SDL_SCANCODE_G},                                              // Gallery (개발용 스프라이트 갤러리)
+      {SDL_SCANCODE_C},                                              // Skip (시네마틱에서 꾹 누르면 건너뛰기)
   }};
   return table;
 }

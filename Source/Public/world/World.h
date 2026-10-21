@@ -80,6 +80,8 @@ class World {
   bool StageCleared() const { return stageCleared_; }
   void NotifyBossDefeated() { bossDefeated_ = true; }
   bool BossDefeated() const { return bossDefeated_; }
+  void NotifyHatCollected() { hatCollected_ = true; }  // 보물 모자를 되찾음 -> 엔딩
+  bool HatCollected() const { return hatCollected_; }
 
  private:
   GameContext& ctx_;
@@ -94,6 +96,7 @@ class World {
   bool ultActive_ = false;
   bool stageCleared_ = false;
   bool bossDefeated_ = false;
+  bool hatCollected_ = false;
   std::string banner_;
   int bannerTimer_ = 0;
 };

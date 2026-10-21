@@ -57,6 +57,11 @@ void SpriteGalleryMode::Render(Graphics& g) {
     for (SpriteId id : {ts.groundTop, ts.dirt, ts.brick, ts.crumble, ts.crumbleHot, ts.spike}) put(id, y, 3);
   }
 
+  // 시네마틱용: 행복한 표정 + 보물 모자 (타일 오른쪽)
+  x = 420.f;
+  for (int i = 0; i < 2; ++i) put(a.phantomHappy[i], 190.f, 3);
+  put(a.treasureHat, 200.f, 3);
+
   // 보스 (단계별 색) + 손
   x = 16.f;
   const float y4 = 350.f;

@@ -6,6 +6,7 @@
 #include "actor/enemy/Bat.h"
 #include "actor/enemy/Enemy.h"
 #include "actor/hazard/PillarHazard.h"
+#include "actor/pickup/Pickups.h"
 #include "actor/projectile/Shockwave.h"
 #include "core/Config.h"
 #include "core/DebugOptions.h"
@@ -474,7 +475,8 @@ class SweepState : public BossStateBase {
   float center_ = 0.f;
 };
 
-// 사망: 연쇄 폭발 후 사라지며 스테이지 클리어(보스 격파)를 알린다
+// 사망: 연쇄 폭발 -> 쥐고 있던 보물 모자를 플레이어 쪽으로 내밀어 놓아준다 -> 흩어지며 사라진다.
+// 완전히 사라진 뒤 보스 격파를 알리고, 모자를 주우면 엔딩으로 넘어간다 (TreasureHat).
 class DyingState : public BossStateBase {
  public:
   const char* Name() const override { return "Dying"; }
@@ -484,15 +486,43 @@ class DyingState : public BossStateBase {
   void Update(Boss& b) override {
     ++t_;
     World& w = b.GetWorld();
-    w.Fx().Shake(6.f);
-    b.pos.y += 0.3f;
-    if (t_ % 6 == 0) {
-      const Color colors[3] = {Hex(0xffb0ff), Hex(0xff6aa0), Hex(0xffffff)};
-      w.Fx().Burst({b.pos.x + RandRange(-50.f, 50.f), b.pos.y + RandRange(-50.f, 50.f)}, 14, colors[(t_ / 6) % 3], 5.f, 40.f);
-      w.Snd().Tone(RandRange(80.f, 200.f), RandRange(40.f, 80.f), 0.2f, Wave::Saw, 0.05f);
+    if (t_ <= kExplodeEnd) {
+      w.Fx().Shake(6.f);
+      b.pos.y += 0.3f;
+      if (t_ % 6 == 0) {
+        const Color colors[3] = {Hex(0xffb0ff), Hex(0xff6aa0), Hex(0xffffff)};
+        w.Fx().Burst({b.pos.x + RandRange(-50.f, 50.f), b.pos.y + RandRange(-50.f, 50.f)}, 14, colors[(t_ / 6) % 3], 5.f, 40.f);
+        w.Snd().Tone(RandRange(80.f, 200.f), RandRange(40.f, 80.f), 0.2f, Wave::Saw, 0.05f);
+      }
+      if (t_ == kExplodeEnd) {
+        w.Fx().Burst(b.pos, 60, Hex(0xffd0ff), 8.f, 60.f);
+        w.Fx().Pop({b.pos.x, b.pos.y - 80.f}, "...TAKE IT BACK.", Hex(0xffe27a));
+        // 플레이어 쪽으로, 화면 안쪽에 모자를 내민다
+        const Vec2 pc = b.PlayerCenter();
+        const float dir = pc.x < b.pos.x ? -1.f : 1.f;
+        b.handTarget = {Clamp(b.pos.x + dir * 120.f, 80.f, kW - 80.f), b.pos.y + 10.f};
+      }
+      return;
     }
-    if (t_ > 140) {
-      w.Fx().Burst(b.pos, 80, Hex(0xffd0ff), 9.f, 70.f);
+    if (t_ <= kRelease) {  // 손을 뻗어 모자를 내민다
+      b.handReach = EaseOut(static_cast<float>(t_ - kExplodeEnd) / static_cast<float>(kRelease - kExplodeEnd));
+      if (t_ == kRelease) {
+        const Vec2 h = b.HatHandPos();
+        b.holdingHat = false;
+        w.Spawn<TreasureHat>(Vec2{h.x, h.y + 16.f});
+        w.Snd().Play(Sfx::Heart);
+        DebugLog("[boss] released the treasure hat");
+      }
+      return;
+    }
+    // 흩어지며 사라진다
+    const float k = static_cast<float>(t_ - kRelease) / static_cast<float>(kVanish - kRelease);
+    b.handReach = 1.f - k;
+    b.alpha = 1.f - k;
+    b.pos.y -= 0.4f;
+    if (t_ % 4 == 0) w.Fx().Burst({b.pos.x + RandRange(-50.f, 50.f), b.pos.y + RandRange(-40.f, 50.f)}, 3, Hex(0xb46cff), 1.5f, 50.f);
+    if (t_ >= kVanish) {
+      w.Fx().Burst(b.pos, 40, Hex(0xffd0ff), 6.f, 60.f);
       Session& s = w.Sess();
       s.score += 5000 + s.lives * 1000 + w.GetPlayer().Hp() * 200;
       DebugLog("[boss] DEFEATED");
@@ -500,6 +530,10 @@ class DyingState : public BossStateBase {
       b.Kill();
     }
   }
+
+ private:
+  static constexpr int kExplodeEnd = 140, kRelease = 190, kVanish = 260;
+  static float EaseOut(float k) { k = Clamp(k, 0.f, 1.f); return 1.f - (1.f - k) * (1.f - k); }
 };
 
 }  // namespace

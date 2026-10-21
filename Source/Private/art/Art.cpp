@@ -11,6 +11,10 @@ using Pal = std::vector<PaletteEntry>;
 // ---- 팔레트 (문자 -> 색). 격자의 문자와 1:1로 대응한다. ----
 const Pal kPhantom = {{'o', Hex(0x241046)}, {'d', Hex(0x4a2480)}, {'p', Hex(0x7a45c4)}, {'l', Hex(0xa47af0)},
                       {'w', Hex(0xffffff)}, {'r', Hex(0xff2a4a)}, {'k', Hex(0x1a0830)}};
+const Pal kPhantomHappy = {{'o', Hex(0x241046)}, {'d', Hex(0x4a2480)}, {'p', Hex(0x7a45c4)}, {'l', Hex(0xa47af0)},
+                           {'w', Hex(0xffffff)}, {'k', Hex(0x1a0830)}, {'b', Hex(0xff7ab8)}};
+const Pal kTreasureHat = {{'o', Hex(0x2a1405)}, {'b', Hex(0x3a1a6a)}, {'B', Hex(0x5a2a9a)}, {'y', Hex(0xffd24a)},
+                          {'h', Hex(0xfff3b0)}, {'d', Hex(0xd9992a)}, {'r', Hex(0xff2a4a)}, {'w', Hex(0xffffff)}};
 const Pal kSlime = {{'o', Hex(0x0e4a2c)}, {'g', Hex(0x4fd98a)}, {'h', Hex(0x8ff5b8)}, {'d', Hex(0x2fa868)},
                     {'w', Hex(0xffffff)}, {'W', Hex(0xe9fff2)}, {'k', Hex(0x0e1a2a)}};
 const Pal kBat = {{'o', Hex(0x2a0a18)}, {'b', Hex(0x3a0f24)}, {'w', Hex(0xa3224f)}, {'W', Hex(0xd4476f)},
@@ -69,6 +73,9 @@ void Init(Graphics& g) {
   Assets& a = g_assets;
   a.phantom[0] = g.CreateSprite(data::Phantom0(), kPhantom);
   a.phantom[1] = g.CreateSprite(data::Phantom1(), kPhantom);
+  a.phantomHappy[0] = g.CreateSprite(data::PhantomHappy0(), kPhantomHappy);
+  a.phantomHappy[1] = g.CreateSprite(data::PhantomHappy1(), kPhantomHappy);
+  a.treasureHat = g.CreateSprite(data::TreasureHat(), kTreasureHat);
   a.slime[0] = g.CreateSprite(data::Slime0(), kSlime);
   a.slime[1] = g.CreateSprite(data::Slime1(), kSlime);
   a.bat[0] = g.CreateSprite(data::Bat0(), kBat);

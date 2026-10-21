@@ -14,7 +14,8 @@ C++17 + SDL2로 만든 2D 횡스크롤 액션 게임. 같은 소스로 **웹(Web
 | **Z** | 섀도우볼 (누르고 있으면 연사) |
 | **X** | 필살기 (게이지 100일 때) |
 | Esc / P | 일시정지 |
-| Enter (또는 Z) | 선택 / 구매 |
+| Enter (또는 Z) | 선택 / 구매, 시네마틱 다음 장면 |
+| **C 꾹 누르기** | 오프닝/엔딩 시네마틱 건너뛰기 |
 
 키 배치는 [Source/Private/platform/Input.cpp](Source/Private/platform/Input.cpp)의 바인딩 표에서 바꾼다.
 

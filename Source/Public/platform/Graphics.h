@@ -60,6 +60,8 @@ class Graphics {
   Vec2 SpriteSize(SpriteId id) const;  // 도트 단위 크기
   // (x,y) = 스프라이트 좌상단(월드 좌표). scale = 도트 1개를 화면 몇 px로 그릴지. flash = 흰색 실루엣.
   void DrawSprite(SpriteId id, float x, float y, int scale = 2, bool flipX = false, float alpha = 1.f, bool flash = false);
+  // 화면 크기(w,h px)를 직접 지정해 그린다. 스쿼시/스트레치처럼 가로세로 배율이 다를 때 사용.
+  void DrawSpriteSized(SpriteId id, float x, float y, float w, float h, bool flipX = false, float alpha = 1.f);
   // 격자(grid px)에 맞춰 계단식으로 그리는 선/원 (매끈한 선 대신 도트 느낌)
   void PixelLine(Vec2 a, Vec2 b, float thickness, Color c, float grid = 2.f);
   void PixelRing(float cx, float cy, float r, float thickness, Color c, float grid = 2.f);

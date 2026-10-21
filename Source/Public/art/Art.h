@@ -14,6 +14,8 @@ struct TileSet {
 
 struct Assets {
   SpriteId phantom[2];
+  SpriteId phantomHappy[2];  // 시네마틱용 눈웃음 표정
+  SpriteId treasureHat = kNoSprite;
   SpriteId slime[2];
   SpriteId bat[2];
   SpriteId houndCalm[2];
