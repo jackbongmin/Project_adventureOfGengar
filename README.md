@@ -61,6 +61,7 @@ docs/           설계 문서
 ```
 
 설계 설명과 "새 적/보스 패턴/스테이지/업그레이드 추가 방법"은 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 참고.
+개발 중 막혔던 문제와 해결 과정은 [docs/troubleshooting/troubleshooting.md](docs/troubleshooting/troubleshooting.md)에 정리했다.
 
 ## 빌드 (웹)
 
