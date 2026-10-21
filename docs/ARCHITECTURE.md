@@ -20,7 +20,10 @@ main -> Game ──(현재 하나)──> GameMode  (Title / Play / Shop / GameO
 
 ### State (state/) — 상태 머신
 `StateMachine<Owner>`는 현재 상태 객체 하나를 들고 있고, `Change()`는 현재 `Update`가 끝난 뒤 적용된다.
-- `state/boss/`: 보스의 행동. Enter -> Float -> 공격 패턴(Volley, Ring, Summon, Slam, Beam, Rain, Pillar, Dash, Blink) -> Float ... -> Dying
+- `state/boss/`: 보스의 행동. Enter -> Float -> 공격 패턴 -> Float ... -> Dying
+  - 평소(Float)에는 플레이어와 약 250px 거리를 두고 떠 있으며 몸통 접촉 피해가 없다. 몸으로 덮치는 기술(Dash 질주, Slam 낙하, Lunge 돌진) 중에만 접촉 피해가 생긴다.
+  - 원거리: Volley(부채꼴), Ring(전방위), Spiral(회전 탄막), Homing(유도탄), Rain(위에서 낙하), Beam(광선), Pillar(바닥 기둥)
+  - 예고 후 달려드는 기술: Lunge(조준선으로 위치 고정 후 돌진), Dash(반대편 벽에서 바닥 질주), Slam(내려찍기), Blink(순간이동 후 사격), Summon(소환)
 - `state/play/`: PlayMode의 진행 단계. Playing, Paused, PlayerDead, StageClear
 
 ### Actor (actor/) — 월드의 객체
@@ -42,6 +45,7 @@ main -> Game ──(현재 하나)──> GameMode  (Title / Play / Shop / GameO
 | ChaseController | Hound | 범위 안이면 추적, 벗어나면 순찰 |
 | TurretController | Caster | 사거리 안이면 조준 사격 |
 | FlyController | Bat | 사인파 비행 |
+| BotController | Player(검증용) | 자동 플레이 봇. 사람 대신 Intent를 만든다 |
 
 ### Data (data/) — 수치와 표
 - `PlayerStats.h`: 업그레이드 레벨 -> 능력치 수식 (공격력, 사거리, 연사, 점프 등)
