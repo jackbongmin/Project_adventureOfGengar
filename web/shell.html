@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adventure of Gengar</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0714; color: #c9b0ee; font: 14px/1.5 system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+  canvas { width: min(96vw, 176vh); height: auto; aspect-ratio: 960 / 544; background: #000; outline: none; image-rendering: pixelated; }
+  p { margin: 0; text-align: center; }
+  kbd { background: #2a1650; border: 1px solid #4a2a7a; border-bottom-width: 3px; border-radius: 4px; padding: 2px 7px; font: 600 12px ui-monospace, Consolas, monospace; }
+</style>
+</head>
+<body>
+  <canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+  <p>Click the game once, then play with the keyboard. <kbd>&larr;</kbd><kbd>&rarr;</kbd> move &nbsp;<kbd>C</kbd> jump &nbsp;<kbd>Z</kbd> shadow ball &nbsp;<kbd>X</kbd> ultimate &nbsp;<kbd>Esc</kbd> pause</p>
+  <script>
+    var Module = {
+      canvas: document.getElementById('canvas'),
+      print: function (t) { console.log(t); },
+      printErr: function (t) { console.warn(t); }
+    };
+    document.getElementById('canvas').addEventListener('mousedown', function () { this.focus(); });
+  </script>
+  {{{ SCRIPT }}}
+</body>
+</html>
