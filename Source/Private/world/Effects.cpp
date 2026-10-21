@@ -27,6 +27,16 @@ void Effects::Trail(Vec2 p, Color color, float size, float life) {
   particles_.push_back({p, {RandRange(-0.3f, 0.3f), RandRange(-0.3f, 0.3f)}, life, life, size, color, 0.f});
 }
 
+void Effects::Dust(Vec2 p, int count, float pushX) {
+  for (int i = 0; i < count; ++i) {
+    const float life = RandRange(14.f, 24.f);
+    const float size = std::floor(RandRange(2.f, 4.f)) * 2.f;  // 도트 느낌이 나도록 짝수 크기
+    particles_.push_back({{p.x + RandRange(-6.f, 6.f), p.y - RandRange(0.f, 3.f)},
+                          {RandRange(-1.f, 1.f) + pushX * RandRange(0.6f, 1.4f), RandRange(-1.1f, -0.3f)},
+                          life, life, size, Rgb(214, 198, 240), 0.04f});
+  }
+}
+
 void Effects::Pop(Vec2 p, const std::string& text, Color color) { texts_.push_back({p, text, color, 45}); }
 void Effects::AddRing(Vec2 center) { rings_.push_back({center, 10.f, 36}); }
 void Effects::AddChunk(Vec2 topLeft) { chunks_.push_back({topLeft, 0.f, 0.f, RandRange(-0.1f, 0.1f)}); }

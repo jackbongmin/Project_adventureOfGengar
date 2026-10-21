@@ -1,5 +1,6 @@
 #include "actor/Player.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "actor/PhantomArt.h"
@@ -17,7 +18,6 @@
 #include "world/World.h"
 
 namespace gengar {
-
 Player::Player(Vec2 p, int maxHp) : Character(ActorKind::Player, p, {22.f, 30.f}, maxHp) {
   if (Debug().bot) SetController(std::make_unique<BotController>());
   else SetController(std::make_unique<PlayerController>());
@@ -29,6 +29,11 @@ void Player::Update(World& w) {
   intent_ = Intent{};
   controller_->Think(*this, w, intent_);
   const Session& s = w.Sess();
+  const bool wasOnGround = onGround_;
+  const float fallSpeed = vel.y;
+  const Vec2 feet{pos.x + size.x * 0.5f, pos.y + size.y};
+  squash_.x += (1.f - squash_.x) * 0.2f;
+  squash_.y += (1.f - squash_.y) * 0.2f;
 
   // ---- 수평 이동 (가속/마찰) ----
   const float maxSpeed = stats::MoveSpeed(s);
@@ -50,6 +55,8 @@ void Player::Update(World& w) {
     coyote_ = 0;
     onGround_ = false;
     w.Snd().Play(Sfx::Jump);
+    w.Fx().Dust(feet, 6);
+    squash_ = {0.75f, 1.3f};  // 위로 쭉 늘어난다
   }
   if (!intent_.jumpHeld && vel.y < -3.5f) vel.y *= 0.8f;
 
@@ -57,14 +64,37 @@ void Player::Update(World& w) {
   MoveAndCollide(w);
   if (pos.y > static_cast<float>(cfg::kRows * cfg::kTile) + 40.f) { Defeat(w); return; }
 
+  // ---- 착지/달리기 먼지 + 착지 찌그러짐 ----
+  const Vec2 newFeet{pos.x + size.x * 0.5f, pos.y + size.y};
+  if (!wasOnGround && onGround_ && fallSpeed > 3.f) {
+    const float k = std::min(1.f, fallSpeed / cfg::kMaxFall);
+    squash_ = {1.f + 0.4f * k, 1.f - 0.35f * k};
+    const int n = 2 + static_cast<int>(k * 5.f);
+    w.Fx().Dust(newFeet, n, -1.f);
+    w.Fx().Dust(newFeet, n, 1.f);
+  } else if (onGround_) {
+    const bool skid = intent_.moveX != 0.f && Sign(intent_.moveX) != Sign(vel.x) && std::fabs(vel.x) > 2.f;
+    if (skid && animFrame_ % 3 == 0) w.Fx().Dust(newFeet, 1, Sign(vel.x) * 0.8f);  // 급정거
+    else if (std::fabs(vel.x) > maxSpeed * 0.75f && animFrame_ % 8 == 0) w.Fx().Dust(newFeet, 1, -static_cast<float>(facing_) * 0.6f);
+  }
+
   // ---- 공격 ----
   if (cooldown_ > 0) --cooldown_;
   if (intent_.shoot && cooldown_ <= 0) Shoot(w);
-  if (intent_.ultimate && s.gauge >= 100.f) CastUltimate(w);
+  if ((intent_.ultimate || ultQueued_) && s.gauge >= 100.f) CastUltimate(w);
+  ultQueued_ = false;
 
   if (invuln_ > 0) --invuln_;
   ++animFrame_;
   CheckHazards(w);
+}
+
+void Player::LatchInput(World& w) {
+  if (defeated_ || !controller_) return;
+  Intent in;
+  controller_->Think(*this, w, in);
+  if (in.jumpPressed) jumpBuffer_ = 8;  // Update에서 1 줄어든 뒤 평소 버퍼(7)와 같아진다
+  if (in.ultimate) ultQueued_ = true;
 }
 
 void Player::Shoot(World& w) {
@@ -133,6 +163,9 @@ void Player::TakeDamage(World& w, const DamageInfo& info) {
   }
   --hp_;
   invuln_ = 100;
+  w.HitStop(6);
+  w.BreakCombo();
+  squash_ = {1.25f, 0.8f};
   vel.y = -6.f;
   vel.x = static_cast<float>(info.dir) * 5.f;
   w.Fx().Shake(8.f);
@@ -145,6 +178,7 @@ void Player::Defeat(World& w) {
   if (defeated_) return;
   defeated_ = true;
   defeatedTimer_ = 0;
+  w.BreakCombo();
   w.Fx().Shake(12.f);
   w.Fx().Burst(Bounds().Center(), 40, Hex(0xb36bff), 6.f, 50.f);
   w.Snd().Play(Sfx::PlayerDie);
@@ -157,6 +191,7 @@ void Player::Render(Graphics& gfx, const World&) {
   PhantomStyle style;
   style.happy = style.hat = wearingHat_;
   style.hatGlow = wearingHat_ ? 1.f : 0.f;
+  style.squash = squash_;
   DrawPhantom(gfx, {c.x, c.y - 7.f}, facing_, static_cast<float>(animFrame_), 1.f, 1.f, style);  // 스프라이트 발끝을 히트박스 바닥에 맞춘다
 }
 

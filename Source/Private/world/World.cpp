@@ -1,6 +1,7 @@
 #include "world/World.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include "actor/Player.h"
 #include "actor/boss/Boss.h"
@@ -13,6 +14,7 @@
 #include "core/Random.h"
 #include "core/Session.h"
 #include "data/PlayerStats.h"
+#include "platform/Audio.h"
 #include "platform/Graphics.h"
 #include "world/LevelRenderer.h"
 
@@ -55,6 +57,11 @@ int World::CountAlive(ActorKind kind) const {
 }
 
 void World::Update() {
+  if (hitStop_ > 0) {  // 히트스톱 중에는 아무것도 움직이지 않는다. 그 사이 눌린 점프/필살기는 플레이어가 기억해 둔다.
+    --hitStop_;
+    player_->LatchInput(*this);
+    return;
+  }
   ++frame_;
   level_.UpdateCrumbles(*this);
   for (size_t i = 0; i < actors_.size(); ++i) {
@@ -71,6 +78,8 @@ void World::Update() {
   fx_.Update();
   camera_.Update(player_->Bounds(), player_->Facing(), level_.PixelWidth());
   if (bannerTimer_ > 0) --bannerTimer_;
+  if (comboTimer_ > 0 && --comboTimer_ == 0) combo_ = 0;
+  if (comboPop_ > 0) --comboPop_;
 }
 
 void World::UpdateEffects() { fx_.Update(); }
@@ -93,6 +102,19 @@ void World::Render(Graphics& gfx) const {
   }
   fx_.Render(gfx);
   gfx.SetOffset(0.f, 0.f);
+}
+
+int World::RegisterKill(Vec2 at) {
+  ++combo_;
+  comboTimer_ = kComboFrames;
+  comboPop_ = 12;
+  if (combo_ >= 2) Snd().Tone(520.f * std::pow(1.06f, static_cast<float>(std::min(combo_, 24))), 0.f, 0.07f, Wave::Square, 0.04f);
+  if (combo_ % 5 == 0) {
+    AddCoins(5);
+    fx_.Pop({at.x, at.y - 30.f}, std::to_string(combo_) + " COMBO +5", Hex(0xffb347));
+    Snd().Play(Sfx::Coin);
+  }
+  return ComboMultiplier();
 }
 
 void World::AddCoins(int n) { ctx_.session.coins += n; }

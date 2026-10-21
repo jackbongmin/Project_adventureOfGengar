@@ -1,6 +1,7 @@
 #pragma once
 // 한 스테이지의 모든 것을 담는 컨테이너: 레벨, 액터 목록, 카메라, 이펙트.
 // 액터는 Update(World&)로 이 객체를 통해 다른 액터/레벨/사운드에 접근한다.
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
@@ -72,6 +73,18 @@ class World {
   void AddGauge(float n);  // 필살기 게이지 (필살기 발동 중에는 충전되지 않음)
   void SetUltActive(bool on) { ultActive_ = on; }
 
+  // ---- 타격감 ----
+  // 히트스톱: frames 동안 월드 전체가 멈춘다 (화면 흔들림은 유지). 겹치면 긴 쪽을 따른다.
+  void HitStop(int frames) { hitStop_ = std::max(hitStop_, frames); }
+  // 콤보: 적을 처치할 때마다 +1, kComboFrames 안에 다음 처치가 없거나 피격되면 끊긴다.
+  static constexpr int kComboFrames = 180;
+  int RegisterKill(Vec2 at);  // 콤보 +1 후 점수 배율(1 + 콤보/5)을 돌려준다. 5콤보마다 코인 보너스.
+  void BreakCombo() { combo_ = 0; comboTimer_ = 0; }
+  int Combo() const { return combo_; }
+  int ComboTimer() const { return comboTimer_; }
+  int ComboPop() const { return comboPop_; }  // 콤보가 오른 직후 HUD 글자가 커지는 연출용
+  int ComboMultiplier() const { return 1 + combo_ / 5; }
+
   void ShowBanner(const std::string& text, int frames) { banner_ = text; bannerTimer_ = frames; }
   const std::string& Banner() const { return banner_; }
   int BannerTimer() const { return bannerTimer_; }
@@ -94,6 +107,10 @@ class World {
   Boss* boss_ = nullptr;
   int frame_ = 0;
   bool ultActive_ = false;
+  int hitStop_ = 0;
+  int combo_ = 0;
+  int comboTimer_ = 0;
+  int comboPop_ = 0;
   bool stageCleared_ = false;
   bool bossDefeated_ = false;
   bool hatCollected_ = false;

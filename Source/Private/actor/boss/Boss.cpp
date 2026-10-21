@@ -93,6 +93,7 @@ void Boss::Update(World& w) {
       phase_ = ph;
       DebugLog("[boss] PHASE %d reached (hp %d/%d)", ph + 1, Hp(), MaxHp());
       w.Fx().Shake(14.f);
+      w.HitStop(12);
       w.Snd().Play(Sfx::BossPhase);
       w.ShowBanner(ph == 1 ? "- RAGE -" : "- FURY -", 90);
     }
@@ -122,6 +123,7 @@ void Boss::TakeDamage(World& w, const DamageInfo& info) {
   if (hp_ > 0.f) return;
 
   hp_ = 0.f;
+  w.HitStop(24);  // 결정타: 길게 멈춘다
   beam.active = false;
   w.ForEach(ActorKind::EnemyShot, [](Actor& a) { a.Kill(); });
   w.ForEach(ActorKind::Hazard, [](Actor& a) { a.Kill(); });
