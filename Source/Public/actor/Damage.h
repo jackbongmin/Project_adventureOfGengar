@@ -10,6 +10,7 @@ struct DamageInfo {
   int dir = 1;            // 피해를 준 쪽에서 받는 쪽으로의 x 방향 (넉백/연출용)
   bool stomp = false;     // 밟기 공격
   bool ultimate = false;  // 필살기 (게이지 충전 제외)
+  const char* source = "";  // 피해 출처 이름 (디버그 로그용)
 };
 
 class IDamageable {

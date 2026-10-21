@@ -1,6 +1,7 @@
 #include "world/Level.h"
 
 #include "actor/Player.h"
+#include "core/DebugOptions.h"
 #include "platform/Audio.h"
 #include "world/Effects.h"
 #include "world/World.h"
@@ -59,6 +60,7 @@ void Level::UpdateCrumbles(World& world) {
       case CrumbleGroup::State::Idle:
         if (p.IsAlive() && p.OnGround() && std::fabs(pb.Bottom() - top) < 1.5f && pb.Right() > x0 && pb.x < x1) {
           g.state = CrumbleGroup::State::Shake;
+          DebugLog("[crumble] shake row %d cols %d-%d", g.row, g.c0, g.c1);
           g.timer = 0;
           world.Snd().Play(Sfx::CrumbleShake);
         }
@@ -67,6 +69,7 @@ void Level::UpdateCrumbles(World& world) {
         if (++g.timer % 12 == 0) world.Snd().Play(Sfx::CrumbleShake);
         if (g.timer >= cfg::kCrumbleFrames) {
           g.state = CrumbleGroup::State::Gone;
+          DebugLog("[crumble] fell row %d cols %d-%d", g.row, g.c0, g.c1);
           g.timer = 0;
           for (int c = g.c0; c <= g.c1; ++c) {
             Set(c, g.row, Tile::Empty);
@@ -81,6 +84,7 @@ void Level::UpdateCrumbles(World& world) {
           const bool blocked = p.IsAlive() && pb.Right() > x0 && pb.x < x1 && pb.Bottom() > top && pb.y < top + T;
           if (!blocked) {
             g.state = CrumbleGroup::State::Idle;
+            DebugLog("[crumble] respawn row %d cols %d-%d", g.row, g.c0, g.c1);
             g.timer = 0;
             for (int c = g.c0; c <= g.c1; ++c) Set(c, g.row, Tile::Crumble);
           }

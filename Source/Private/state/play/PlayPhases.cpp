@@ -2,6 +2,8 @@
 
 #include "actor/Player.h"
 #include "core/Config.h"
+#include "core/DebugOptions.h"
+#include "core/Session.h"
 #include "core/Game.h"
 #include "platform/Graphics.h"
 #include "platform/Input.h"
@@ -45,6 +47,7 @@ class PausedPhase : public PlayPhase {
 class PlayerDeadPhase : public PlayPhase {
  public:
   const char* Name() const override { return "PlayerDead"; }
+  void Enter(PlayMode&) override { DebugLog("[play] player down"); }
   void Update(PlayMode& m) override {
     ++t_;
     m.GetWorld().UpdateEffects();
@@ -61,6 +64,7 @@ class PlayerDeadPhase : public PlayPhase {
 class StageClearPhase : public PlayPhase {
  public:
   const char* Name() const override { return "StageClear"; }
+  void Enter(PlayMode& m) override { DebugLog("[play] STAGE CLEAR (score %d, frame %d)", m.GetGame().Sess().score, m.GetWorld().Frame()); }
   void Update(PlayMode& m) override {
     ++t_;
     m.GetWorld().UpdateEffects();

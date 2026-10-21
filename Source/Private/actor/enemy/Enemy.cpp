@@ -46,7 +46,7 @@ void Enemy::ContactPlayer(World& w) {
     TakeDamage(w, DamageInfo{2.f, 1, true, false});
     p.Bounce(-8.5f);
   } else {
-    p.TakeDamage(w, DamageInfo{1.f, Sign(p.pos.x - pos.x) != 0 ? Sign(p.pos.x - pos.x) : 1});
+    p.TakeDamage(w, DamageInfo{1.f, Sign(p.pos.x - pos.x) != 0 ? Sign(p.pos.x - pos.x) : 1, false, false, "enemy-contact"});
   }
 }
 

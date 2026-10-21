@@ -27,7 +27,7 @@ void PillarHazard::Update(World& w) {
   if (t_ >= warn_) {
     Player& p = w.GetPlayer();
     if (p.IsAlive() && Bounds().Overlaps(p.Bounds())) {
-      p.TakeDamage(w, DamageInfo{1.f, Sign(p.Bounds().Center().x - pos.x) != 0 ? Sign(p.Bounds().Center().x - pos.x) : 1});
+      p.TakeDamage(w, DamageInfo{1.f, Sign(p.Bounds().Center().x - pos.x) != 0 ? Sign(p.Bounds().Center().x - pos.x) : 1, false, false, "pillar"});
     }
   }
 }

@@ -4,6 +4,7 @@
 
 #include "actor/PhantomArt.h"
 #include "core/Config.h"
+#include "core/DebugOptions.h"
 #include "core/Game.h"
 #include "platform/Graphics.h"
 #include "platform/Input.h"
@@ -12,7 +13,7 @@ namespace gengar {
 
 void TitleMode::Update(Game& game) {
   ++frame_;
-  if (game.In().Pressed(Action::Confirm)) game.StartNewRun();
+  if (game.In().Pressed(Action::Confirm) || (Debug().bot && frame_ > 30)) game.StartNewRun();  // bot=1 이면 자동 시작
   if (game.In().Pressed(Action::Gallery)) game.GoGallery();
 }
 

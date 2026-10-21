@@ -20,7 +20,7 @@ void Shockwave::Update(World& w) {
   const float T = static_cast<float>(cfg::kTile);
   if (pos.x < T + 8.f || pos.x > w.GetLevel().PixelWidth() - T - 8.f) { Kill(); return; }
   Player& p = w.GetPlayer();
-  if (p.IsAlive() && Bounds().Overlaps(p.Bounds())) p.TakeDamage(w, DamageInfo{1.f, Sign(vel.x)});
+  if (p.IsAlive() && Bounds().Overlaps(p.Bounds())) p.TakeDamage(w, DamageInfo{1.f, Sign(vel.x), false, false, "shockwave"});
   if (w.Frame() % 2 == 0) w.Fx().Trail({pos.x, pos.y + RandRange(-8.f, 8.f)}, Hex(0xc58bff), 4.f, 14.f);
 }
 

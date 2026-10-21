@@ -4,6 +4,7 @@
 
 #include "actor/PhantomArt.h"
 #include "core/Config.h"
+#include "core/DebugOptions.h"
 #include "core/Game.h"
 #include "data/PlayerStats.h"
 #include "data/Upgrades.h"
@@ -16,14 +17,39 @@ namespace gengar {
 void ShopMode::Update(Game& game) {
   ++frame_;
   const std::vector<UpgradeDef>& defs = AllUpgrades();
+
+  if (Debug().bot) {  // 검증용: 60프레임마다 살 수 있는 가장 좋은 업그레이드를 사고, 더 살 게 없으면 출발한다.
+    if (frame_ % 60 == 0) {
+      static const UpgradeId priority[] = {UpgradeId::Multi, UpgradeId::Power, UpgradeId::Rate, UpgradeId::MaxHp, UpgradeId::Ult, UpgradeId::Jump, UpgradeId::Speed, UpgradeId::Life};
+      Session& s = game.Sess();
+      bool bought = false;
+      for (UpgradeId id : priority) {
+        for (const UpgradeDef& def : defs) {
+          const int cost = NextCost(def, s);
+          if (def.id != id || cost < 0 || s.coins < cost) continue;
+          s.coins -= cost;
+          ++s.Level(def.id);
+          if (def.id == UpgradeId::Life) ++s.lives;
+          DebugLog("[shop] bought %s -> Lv.%d (cost %d, coins left %d)", def.name, s.Level(def.id), cost, s.coins);
+          bought = true;
+          break;
+        }
+        if (bought) break;
+      }
+      if (!bought) { DebugLog("[shop] nothing more to buy, departing"); game.LeaveShop(); return; }
+    }
+    return;
+  }
+
   const int rows = static_cast<int>(defs.size()) + 1;  // 마지막 줄 = 출발
   Input& in = game.In();
 
-  if (in.Pressed(Action::Up)) { selected_ = (selected_ + rows - 1) % rows; game.Snd().Play(Sfx::Select); }
-  if (in.Pressed(Action::Down)) { selected_ = (selected_ + 1) % rows; game.Snd().Play(Sfx::Select); }
+  if (in.Pressed(Action::Up)) { selected_ = (selected_ + rows - 1) % rows; game.Snd().Play(Sfx::Select); DebugLog("[shop] cursor up -> %d", selected_); }
+  if (in.Pressed(Action::Down)) { selected_ = (selected_ + 1) % rows; game.Snd().Play(Sfx::Select); DebugLog("[shop] cursor down -> %d", selected_); }
   if (errorTimer_ > 0) --errorTimer_;
 
   if (in.Pressed(Action::Confirm)) {
+    DebugLog("[shop] confirm on row %d (coins %d)", selected_, game.Sess().coins);
     if (selected_ == rows - 1) { game.LeaveShop(); return; }
     const UpgradeDef& def = defs[static_cast<size_t>(selected_)];
     Session& s = game.Sess();
@@ -73,7 +99,7 @@ void ShopMode::Render(Graphics& g) {
     const bool can = cost >= 0 && s.coins >= cost;
     g.Text(cost < 0 ? "MAX" : "$ " + std::to_string(cost), 616, y + 11, 2, cost < 0 ? Hex(0x9a82c0) : can ? Hex(0xffe27a) : Hex(0xff6a8a), Align::Right);
   }
-  if (errorTimer_ > 0) g.Text("NOT ENOUGH COINS OR ALREADY MAX", 335, 536, 2, Hex(0xff6a8a), Align::Center);
+  if (errorTimer_ > 0) g.Text("NOT ENOUGH COINS OR ALREADY MAX", 335, 520, 2, Hex(0xff6a8a), Align::Center);
 
   // 현재 능력치 패널
   g.FillRect(660, 108, 260, 330, Rgb(255, 255, 255, 18));

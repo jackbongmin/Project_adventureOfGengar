@@ -16,6 +16,7 @@ class Player : public Character {
   int DefeatedTimer() const { return defeatedTimer_; }
   bool Invulnerable() const { return invuln_ > 0; }
   void Heal(int n) { hp_ = std::min(maxHp_, hp_ + n); }
+  void SetHp(int hp) { hp_ = Clamp(hp, 1, maxHp_); }  // 디버그용
   void Bounce(float vy) { vel.y = vy; onGround_ = false; }  // 적을 밟은 반동
 
  private:

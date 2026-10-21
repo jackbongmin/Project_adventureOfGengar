@@ -4,6 +4,7 @@
 
 #include "actor/projectile/EnemyOrb.h"
 #include "controller/TurretController.h"
+#include "core/DebugOptions.h"
 #include "core/Random.h"
 #include "platform/Audio.h"
 #include "art/Art.h"
@@ -19,6 +20,7 @@ Caster::Caster(Vec2 p, int stage)
 }
 
 void Caster::OnShoot(World& w, Vec2 aim) {
+  DebugLog("[caster] fire at x=%d", static_cast<int>(pos.x));
   const Vec2 origin{pos.x + size.x * 0.5f + static_cast<float>(facing_) * 10.f, pos.y + 8.f};
   w.Spawn<EnemyOrb>(origin, Vec2{aim.x * orbSpeed_, aim.y * orbSpeed_});
   w.Snd().Play(Sfx::BossShoot);

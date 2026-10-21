@@ -7,6 +7,8 @@
 #include "actor/enemy/Enemy.h"
 #include "actor/projectile/ShadowBall.h"
 #include "controller/PlayerController.h"
+#include "controller/BotController.h"
+#include "core/DebugOptions.h"
 #include "core/Config.h"
 #include "core/Session.h"
 #include "data/PlayerStats.h"
@@ -17,7 +19,8 @@
 namespace gengar {
 
 Player::Player(Vec2 p, int maxHp) : Character(ActorKind::Player, p, {22.f, 30.f}, maxHp) {
-  SetController(std::make_unique<PlayerController>());
+  if (Debug().bot) SetController(std::make_unique<BotController>());
+  else SetController(std::make_unique<PlayerController>());
 }
 
 void Player::Update(World& w) {
@@ -80,6 +83,7 @@ void Player::Shoot(World& w) {
 // 필살기: 화면 안의 모든 적에게 큰 피해, 적 탄환 제거, 잠시 무적
 void Player::CastUltimate(World& w) {
   Session& s = w.Sess();
+  DebugLog("[player] ultimate cast");
   s.gauge = 0.f;
   w.SetUltActive(true);
   const DamageInfo info{stats::UltDamage(s), 1, false, true};
@@ -107,7 +111,7 @@ void Player::CheckHazards(World& w) {
   const int r = static_cast<int>(std::floor((pos.y + size.y - 1.f) / T));
   for (int c = c0; c <= c1; ++c) {
     if (lv.At(c, r) == Tile::Spike && pos.y + size.y > static_cast<float>(r) * T + 14.f) {
-      TakeDamage(w, DamageInfo{1.f, -facing_});
+      TakeDamage(w, DamageInfo{1.f, -facing_, false, false, "spike"});
       break;
     }
   }
@@ -122,6 +126,11 @@ void Player::CheckHazards(World& w) {
 
 void Player::TakeDamage(World& w, const DamageInfo& info) {
   if (invuln_ > 0 || defeated_) return;
+  if (Debug().god) {  // 검증용 무적: 피격은 무시하되 출처를 기록한다
+    invuln_ = 20;
+    DebugLog("[player] hit by %s (ignored: god)", info.source);
+    return;
+  }
   --hp_;
   invuln_ = 100;
   vel.y = -6.f;

@@ -23,6 +23,9 @@ class Heart : public Pickup {
   explicit Heart(Vec2 center) : Pickup(center) {}
   void Update(World& world) override;
   void Render(Graphics& gfx, const World& world) override;
+
+ private:
+  bool skipLogged_ = false;  // 디버그 로그 중복 방지
 };
 
 }  // namespace gengar

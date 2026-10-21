@@ -4,6 +4,7 @@
 
 #include "actor/Player.h"
 #include "art/Art.h"
+#include "core/DebugOptions.h"
 #include "platform/Audio.h"
 #include "platform/Graphics.h"
 #include "world/World.h"
@@ -32,9 +33,14 @@ void Coin::Render(Graphics& g, const World& w) {
 
 void Heart::Update(World& w) {
   Player& p = w.GetPlayer();
-  if (!p.IsAlive() || p.Hp() >= p.MaxHp()) return;  // 풀피면 먹지 않는다
+  if (!p.IsAlive()) return;
   const Vec2 pc = p.Bounds().Center();
+  if (p.Hp() >= p.MaxHp()) {  // 풀피면 먹지 않고 그 자리에 남는다
+    if (!skipLogged_ && std::hypot(pos.x - pc.x, pos.y - pc.y) < 24.f) { skipLogged_ = true; DebugLog("[heart] left in place (full hp %d/%d)", p.Hp(), p.MaxHp()); }
+    return;
+  }
   if (std::hypot(pos.x - pc.x, pos.y - pc.y) < 24.f) {
+    DebugLog("[heart] collected (hp %d -> %d)", p.Hp(), p.Hp() + 1);
     p.Heal(1);
     w.Fx().Pop({pos.x, pos.y - 10.f}, "+HP", Hex(0xff7aa8));
     w.Snd().Play(Sfx::Heart);

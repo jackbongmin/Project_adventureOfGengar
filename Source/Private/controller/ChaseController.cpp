@@ -4,6 +4,7 @@
 
 #include "actor/Character.h"
 #include "actor/Player.h"
+#include "core/DebugOptions.h"
 #include "platform/Audio.h"
 #include "world/World.h"
 
@@ -21,6 +22,7 @@ void ChaseController::Think(Character& self, World& world, Intent& out) {
 
   if (player.IsAlive() && !aggro_ && std::fabs(dx) < kAggroX && std::fabs(dy) < kAggroY) {
     aggro_ = true;
+    DebugLog("[hound] alerted at x=%d", static_cast<int>(ec.x));
     world.Fx().Pop({ec.x, self.pos.y - 6.f}, "!", Hex(0xff6a8a));
     world.Snd().Play(Sfx::Alert);
   } else if (aggro_ && (!player.IsAlive() || std::fabs(dx) > kLoseX || std::fabs(dy) > kLoseY)) {

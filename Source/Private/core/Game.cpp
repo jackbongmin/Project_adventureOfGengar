@@ -8,6 +8,7 @@
 
 #include "art/Art.h"
 #include "core/Config.h"
+#include "core/DebugOptions.h"
 #include "mode/GameOverMode.h"
 #include "mode/PlayMode.h"
 #include "mode/ShopMode.h"
@@ -58,7 +59,7 @@ void Game::Frame() {
   const uint64_t now = SDL_GetPerformanceCounter();
   const double dt = static_cast<double>(now - lastCounter_) / static_cast<double>(SDL_GetPerformanceFrequency());
   lastCounter_ = now;
-  accumulator_ += std::min(dt, 0.1);
+  accumulator_ += std::min(dt, 0.1) * static_cast<double>(Debug().timeScale);
 
   while (accumulator_ >= static_cast<double>(cfg::kFixedStep)) {
     if (pendingValid_) { mode_ = std::move(pending_); pendingValid_ = false; }
@@ -85,15 +86,20 @@ void Game::GoTitle() { ChangeMode(std::make_unique<TitleMode>()); }
 
 void Game::StartNewRun() {
   session_.Reset();
+  session_.stage = Clamp(Debug().startStage, 0, cfg::kStageCount - 1);
+  session_.coins = Debug().startCoins;
+  if (Debug().startInShop) { GoShop(); return; }
   StartStage(false);
 }
 
 void Game::StartStage(bool retry) {
   if (!retry) session_.TakeSnapshot();
+  DebugLog("[game] stage %d start (retry=%d) coins=%d lives=%d score=%d", session_.stage + 1, retry ? 1 : 0, session_.coins, session_.lives, session_.score);
   ChangeMode(std::make_unique<PlayMode>(*this, session_.stage));
 }
 
-void Game::GoShop() { ChangeMode(std::make_unique<ShopMode>(*this)); }
+void Game::GoShop() {
+  DebugLog("[game] shop open coins=%d", session_.coins); ChangeMode(std::make_unique<ShopMode>(*this)); }
 
 void Game::LeaveShop() {
   ++session_.stage;
@@ -102,6 +108,7 @@ void Game::LeaveShop() {
 
 void Game::OnPlayerDefeated() {
   --session_.lives;
+  DebugLog("[game] player defeated, lives left=%d", session_.lives);
   if (session_.lives <= 0) {
     GoGameOver();
   } else {
@@ -110,8 +117,10 @@ void Game::OnPlayerDefeated() {
   }
 }
 
-void Game::GoGameOver() { ChangeMode(std::make_unique<GameOverMode>()); }
+void Game::GoGameOver() {
+  DebugLog("[game] GAME OVER score=%d", session_.score); ChangeMode(std::make_unique<GameOverMode>()); }
 void Game::GoGallery() { ChangeMode(std::make_unique<SpriteGalleryMode>()); }
-void Game::GoVictory() { ChangeMode(std::make_unique<VictoryMode>()); }
+void Game::GoVictory() {
+  DebugLog("[game] VICTORY score=%d lives=%d", session_.score, session_.lives); ChangeMode(std::make_unique<VictoryMode>()); }
 
 }  // namespace gengar
