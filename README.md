@@ -22,11 +22,14 @@ C++17 + SDL2로 만든 2D 횡스크롤 액션 게임. 같은 소스로 **웹(Web
 
 ## 실행하기
 
-가장 쉬운 방법 (웹 빌드를 로컬 서버로 실행):
+가장 쉬운 방법 (웹 빌드를 로컬 서버로 실행). **프로젝트 폴더로 이동한 뒤** 실행한다:
 
 ```powershell
+cd C:\Users\user\Documents\GitHub\project_adventureOfGengar
 powershell -ExecutionPolicy Bypass -File scripts\run_web.ps1
 ```
+
+다른 폴더에서는 스크립트의 전체 경로를 `-File`에 주면 된다. (상대 경로는 현재 폴더 기준이라 못 찾는다.)
 
 - `build-web\index.html`이 없으면 먼저 빌드하고, 브라우저가 열리면 게임 화면을 한 번 클릭한 뒤 키보드로 조작한다.
 - 포트 변경은 `-Port 9000`, 브라우저를 자동으로 열지 않으려면 `-NoBrowser`.
