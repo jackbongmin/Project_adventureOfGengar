@@ -52,7 +52,7 @@ main -> Game ──(현재 하나)──> GameMode  (Title / Play / Shop / GameO
 - `Upgrades.cpp`: 상점 항목 표
 - `BossPatterns.cpp`: 보스 단계별 패턴 순서표
 - `BossTuning.cpp`: 보스 단계별 난이도 표. 이동 속도, 공격 사이 쉬는 시간, 패턴별 탄 수/속도/예고 시간을 "1단계, 2단계, 3단계" 순으로 한 곳에서 조정한다.
-- 보스 체력: 기본 300(`cfg::kBossHp`)에 공격 업그레이드(위력/연사/다중 발사) 1레벨당 12%를 더한다(`stats::BossMaxHp`). 강화해도 패턴을 볼 새 없이 녹는 것을 막는다.
+- 보스 체력: 기본 500(`cfg::kBossHp`)에 공격 업그레이드(위력/연사/다중 발사) 1레벨당 12%를 더한다(`stats::BossMaxHp`). 강화해도 패턴을 볼 새 없이 녹는 것을 막는다.
 - 상점의 "사면 어떻게 바뀌는지" 미리보기는 `Upgrades.cpp`의 `PreviewUpgrade`가 `PlayerStats` 수식으로 계산한다.
 - `core/Config.h`: 화면/타일/중력/보스 체력 등 전역 상수
 - `world/StageBuilder.cpp`: 스테이지 3개의 지형, 적, 아이템 배치

@@ -419,6 +419,61 @@ class LungeState : public BossStateBase {
   bool onFloor_ = false;
 };
 
+// 십자포화: 양쪽 벽에서 가로 탄 줄이 번갈아 날아온다. 줄마다 한 칸은 비어 있어 그 틈으로 지나가면 된다.
+class CrossfireState : public BossStateBase {
+ public:
+  const char* Name() const override { return "Crossfire"; }
+  void Update(Boss& b) override {
+    ++t_;
+    const BossTuning& T = Tuning(b.Phase());
+    constexpr int kFirst = 30, kGap = 42;
+    constexpr float kRowGap = 52.f;
+    b.FloatMove();
+    b.charge = t_ < kFirst ? static_cast<float>(t_) / static_cast<float>(kFirst) : 0.f;
+    if (t_ >= kFirst && (t_ - kFirst) % kGap == 0 && (t_ - kFirst) / kGap < T.crossWaves) {
+      const int wave = (t_ - kFirst) / kGap;
+      const bool fromLeft = wave % 2 == 0;
+      const float top = kGroundY - 30.f - kRowGap * static_cast<float>(T.crossRows - 1);
+      const int hole = RandInt(0, T.crossRows - 1);
+      for (int i = 0; i < T.crossRows; ++i) {
+        if (i == hole) continue;
+        b.FireOrb({fromLeft ? -20.f : kW + 20.f, top + kRowGap * static_cast<float>(i)}, fromLeft ? 0.f : kPi, T.crossSpeed);
+      }
+      b.GetWorld().Snd().Play(Sfx::BossShoot);
+    }
+    if (t_ >= kFirst + (T.crossWaves - 1) * kGap + 50) b.ToFloat();
+  }
+};
+
+// 허공 휩쓸기: 조준한 방향을 중심으로 탄 다발이 좌우로 부채꼴을 훑는다.
+class SweepState : public BossStateBase {
+ public:
+  const char* Name() const override { return "Sweep"; }
+  void Update(Boss& b) override {
+    ++t_;
+    const BossTuning& T = Tuning(b.Phase());
+    constexpr int kStart = 26;
+    b.FloatMove();
+    b.charge = t_ < kStart ? static_cast<float>(t_) / static_cast<float>(kStart) : 0.f;
+    if (t_ == kStart) {
+      const Vec2 pc = b.PlayerCenter();
+      center_ = std::atan2(pc.y - b.pos.y, pc.x - b.pos.x);
+    }
+    if (t_ >= kStart && t_ < kStart + T.sweepFrames && (t_ - kStart) % T.sweepInterval == 0) {
+      const float phase = static_cast<float>(t_ - kStart) / static_cast<float>(T.sweepFrames) * 2.f * kPi;
+      const float base = center_ + std::sin(phase) * T.sweepArc;
+      for (int i = 0; i < T.sweepCount; ++i) {
+        b.FireOrb(b.pos, base + (static_cast<float>(i) - static_cast<float>(T.sweepCount - 1) / 2.f) * 0.3f, T.sweepSpeed);
+      }
+      if ((t_ - kStart) % 20 == 0) b.GetWorld().Snd().Play(Sfx::BossShoot);
+    }
+    if (t_ >= kStart + T.sweepFrames + 30) b.ToFloat();
+  }
+
+ private:
+  float center_ = 0.f;
+};
+
 // 사망: 연쇄 폭발 후 사라지며 스테이지 클리어(보스 격파)를 알린다
 class DyingState : public BossStateBase {
  public:
@@ -467,6 +522,8 @@ std::unique_ptr<BossState> MakeBossAttackState(BossAttack attack) {
     case BossAttack::Spiral: return std::make_unique<SpiralState>();
     case BossAttack::Homing: return std::make_unique<HomingState>();
     case BossAttack::Lunge: return std::make_unique<LungeState>();
+    case BossAttack::Crossfire: return std::make_unique<CrossfireState>();
+    case BossAttack::Sweep: return std::make_unique<SweepState>();
   }
   return std::make_unique<FloatState>();
 }
