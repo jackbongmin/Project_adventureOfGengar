@@ -74,3 +74,4 @@ out/
 .vs/
 *.wasm
 .omc/
+build-web-single/
