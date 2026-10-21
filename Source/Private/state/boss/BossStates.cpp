@@ -11,6 +11,7 @@
 #include "core/DebugOptions.h"
 #include "core/Random.h"
 #include "core/Session.h"
+#include "data/BossTuning.h"
 #include "platform/Audio.h"
 #include "world/World.h"
 
@@ -21,6 +22,7 @@ constexpr float kW = static_cast<float>(cfg::kScreenW);
 constexpr float kGroundY = static_cast<float>(cfg::kGroundRow * cfg::kTile);
 
 // 모든 보스 상태가 공유하는 카운터. 각 상태는 Update 시작 시 ++t_ 한다.
+// 패턴의 수치(탄 수, 속도, 예고 시간 등)는 data/BossTuning.cpp 의 단계별 표에서 읽는다.
 class BossStateBase : public BossState {
  protected:
   int t_ = 0;    // 상태 진입 후 경과 프레임
@@ -42,63 +44,63 @@ class EnterState : public BossStateBase {
   }
 };
 
-// 기본: 플레이어 주변을 떠다니다가 다음 공격을 고른다
+// 기본: 플레이어와 거리를 두고 떠다니다가 다음 공격을 고른다
 class FloatState : public BossStateBase {
  public:
   const char* Name() const override { return "Float"; }
   void Update(Boss& b) override {
     ++t_;
     b.FloatMove();
-    if (t_ > 90 - b.Phase() * 15) {
+    if (t_ > Tuning(b.Phase()).idleFrames) {
       const std::vector<BossAttack>& seq = AttackSequence(b.Phase());
       b.StartAttack(seq[static_cast<size_t>(b.attackIndex++) % seq.size()]);
     }
   }
 };
 
-// 암흑탄: 기를 모은 뒤 플레이어를 향해 부채꼴 발사
+// 암흑탄: 기를 모은 뒤 플레이어를 향해 부채꼴로 연속 발사
 class VolleyState : public BossStateBase {
  public:
   const char* Name() const override { return "Volley"; }
   void Update(Boss& b) override {
     ++t_;
     World& w = b.GetWorld();
-    const int ph = b.Phase();
+    const BossTuning& T = Tuning(b.Phase());
     b.FloatMove();
-    b.charge = t_ < 30 ? static_cast<float>(t_) / 30.f : 0.f;
-    if (t_ == 30) {
-      const int count = ph == 2 ? 5 : 3;
+    b.charge = t_ < 24 ? static_cast<float>(t_) / 24.f : 0.f;
+    if (t_ == 24) {
       const Vec2 pc = b.PlayerCenter();
       const float base = std::atan2(pc.y - b.pos.y, pc.x - b.pos.x);
-      for (int i = 0; i < count; ++i) {
-        b.FireOrb(b.pos, base + (static_cast<float>(i) - static_cast<float>(count - 1) / 2.f) * 0.28f, 4.f + static_cast<float>(ph) * 0.5f);
+      for (int i = 0; i < T.volleyCount; ++i) {
+        b.FireOrb(b.pos, base + (static_cast<float>(i) - static_cast<float>(T.volleyCount - 1) / 2.f) * 0.24f, T.volleySpeed);
       }
       ++n_;
       w.Snd().Play(Sfx::BossShoot);
     }
-    if (t_ >= 60) {
-      if (n_ < (ph >= 1 ? 2 : 1)) t_ = 0;
+    if (t_ >= 46) {
+      if (n_ < T.volleyRepeats) t_ = 0;
       else b.ToFloat();
     }
   }
 };
 
-// 공허의 고리: 전방위 원형 탄막 2회
+// 공허의 고리: 전방위 원형 탄막을 여러 겹으로 (겹마다 엇갈리게)
 class RingState : public BossStateBase {
  public:
   const char* Name() const override { return "Ring"; }
   void Update(Boss& b) override {
     ++t_;
+    const BossTuning& T = Tuning(b.Phase());
+    constexpr int kFirst = 34, kGap = 30;
     b.FloatMove();
-    b.charge = std::min(1.f, static_cast<float>(t_ % 80) / 40.f);
-    if (t_ == 40 || t_ == 80) {
-      constexpr int kCount = 14;
-      const float offset = t_ == 40 ? 0.f : kPi / kCount;
-      for (int i = 0; i < kCount; ++i) b.FireOrb(b.pos, offset + static_cast<float>(i) * 2.f * kPi / kCount, 2.8f);
-      b.charge = 0.f;
+    b.charge = t_ < kFirst ? static_cast<float>(t_) / static_cast<float>(kFirst) : 0.f;
+    if (t_ >= kFirst && (t_ - kFirst) % kGap == 0 && (t_ - kFirst) / kGap < T.ringWaves) {
+      const int wave = (t_ - kFirst) / kGap;
+      const float offset = wave % 2 == 0 ? 0.f : kPi / static_cast<float>(T.ringCount);
+      for (int i = 0; i < T.ringCount; ++i) b.FireOrb(b.pos, offset + static_cast<float>(i) * 2.f * kPi / static_cast<float>(T.ringCount), T.ringSpeed);
       b.GetWorld().Snd().Play(Sfx::BossRoar);
     }
-    if (t_ >= 100) b.ToFloat();
+    if (t_ >= kFirst + (T.ringWaves - 1) * kGap + 36) b.ToFloat();
   }
 };
 
@@ -110,8 +112,8 @@ class SummonState : public BossStateBase {
     ++t_;
     World& w = b.GetWorld();
     b.FloatMove();
-    b.charge = std::min(1.f, static_cast<float>(t_) / 40.f);
-    if (t_ == 40) {
+    b.charge = std::min(1.f, static_cast<float>(t_) / 32.f);
+    if (t_ == 32) {
       if (w.CountAlive(ActorKind::Enemy) < 4) {
         w.Spawn<Bat>(Vec2{200.f, 140.f}, w.StageIndex(), 180.f);
         w.Spawn<Bat>(Vec2{kW - 230.f, 140.f}, w.StageIndex(), 180.f);
@@ -121,7 +123,7 @@ class SummonState : public BossStateBase {
       }
       b.charge = 0.f;
     }
-    if (t_ >= 70) b.ToFloat();
+    if (t_ >= 56) b.ToFloat();
   }
 };
 
@@ -132,14 +134,14 @@ class SlamState : public BossStateBase {
   void Update(Boss& b) override {
     ++t_;
     World& w = b.GetWorld();
-    const int ph = b.Phase();
+    const BossTuning& T = Tuning(b.Phase());
     if (sub_ == 0) {
-      b.pos.x += Clamp((b.PlayerCenter().x - b.pos.x) * 0.08f, -6.f, 6.f);
-      b.pos.y += (150.f - b.pos.y) * 0.1f;
-      b.charge = std::min(1.f, static_cast<float>(t_) / 50.f);
-      if (t_ >= 50) { sub_ = 1; fall_ = 0.f; b.charge = 0.f; b.contactEnabled = true; }  // 낙하 중에만 접촉 피해
+      b.pos.x += Clamp((b.PlayerCenter().x - b.pos.x) * 0.1f, -8.f, 8.f);
+      b.pos.y += (150.f - b.pos.y) * 0.12f;
+      b.charge = std::min(1.f, static_cast<float>(t_) / static_cast<float>(T.slamWindup));
+      if (t_ >= T.slamWindup) { sub_ = 1; fall_ = 0.f; b.charge = 0.f; b.contactEnabled = true; }  // 낙하 중에만 접촉 피해
     } else if (sub_ == 1) {
-      fall_ += 0.9f;
+      fall_ += 1.1f;
       b.pos.y += fall_;
       if (b.pos.y + 52.f >= kGroundY) {
         b.pos.y = kGroundY - 52.f;
@@ -151,10 +153,10 @@ class SlamState : public BossStateBase {
         w.Snd().Play(Sfx::BossSlam);
         w.Fx().Burst({b.pos.x, kGroundY}, 24, Hex(0xd9a0ff), 5.f);
         for (int s = -1; s <= 1; s += 2) {
-          w.Spawn<Shockwave>(Vec2{b.pos.x + static_cast<float>(s) * 60.f, kGroundY - 11.f}, static_cast<float>(s) * (4.5f + static_cast<float>(ph) * 0.7f));
+          w.Spawn<Shockwave>(Vec2{b.pos.x + static_cast<float>(s) * 60.f, kGroundY - 11.f}, static_cast<float>(s) * T.slamWaveSpeed);
         }
       }
-    } else if (t_ >= 55) {
+    } else if (t_ >= T.slamRest) {
       b.ToFloat();
     }
   }
@@ -163,27 +165,29 @@ class SlamState : public BossStateBase {
   float fall_ = 0.f;
 };
 
-// 공허 광선: 조준선 예고 -> 굵은 광선 (3단계에서는 회전)
+// 공허 광선: 조준선 예고 -> 굵은 광선 (2단계부터 서서히 회전, 3단계에서 더 빠르게)
 class BeamState : public BossStateBase {
  public:
   const char* Name() const override { return "Beam"; }
   void Update(Boss& b) override {
     ++t_;
     World& w = b.GetWorld();
+    const BossTuning& T = Tuning(b.Phase());
     const Vec2 pc = b.PlayerCenter();
+    constexpr int kLockAt = 18;
     b.FloatMove();
-    if (t_ < 20) {
-      b.charge = static_cast<float>(t_) / 20.f;
-    } else if (t_ == 20) {
+    if (t_ < kLockAt) {
+      b.charge = static_cast<float>(t_) / static_cast<float>(kLockAt);
+    } else if (t_ == kLockAt) {
       b.beam = BeamInfo{true, false, std::atan2(pc.y - b.pos.y, pc.x - b.pos.x), Chance(0.5f) ? -1 : 1};
       w.Snd().Play(Sfx::BeamCharge);
-    } else if (t_ == 65 && b.beam.active) {
+    } else if (t_ == T.beamFireAt && b.beam.active) {
       b.beam.firing = true;
       w.Fx().Shake(8.f);
       w.Snd().Play(Sfx::BeamFire);
     }
     if (b.beam.active && b.beam.firing) {
-      if (b.Phase() >= 2) b.beam.angle += static_cast<float>(b.beam.sweepDir) * 0.018f;
+      b.beam.angle += static_cast<float>(b.beam.sweepDir) * T.beamSweep;
       const float dx = pc.x - b.pos.x, dy = pc.y - b.pos.y;
       const float ca = std::cos(b.beam.angle), sa = std::sin(b.beam.angle);
       Player& p = w.GetPlayer();
@@ -191,67 +195,71 @@ class BeamState : public BossStateBase {
         p.TakeDamage(w, DamageInfo{1.f, Sign(dx) != 0 ? Sign(dx) : 1, false, false, "beam"});
       }
     }
-    if (t_ >= 95) b.ToFloat();
+    if (t_ >= T.beamFireAt + 30) b.ToFloat();
   }
 };
 
-// 어둠의 비: 천장에서 마법구가 연달아 떨어진다
+// 어둠의 비: 천장에서 마법구가 연달아 떨어진다 (3발 중 2발은 플레이어 위치를 노린다)
 class RainState : public BossStateBase {
  public:
   const char* Name() const override { return "Rain"; }
   void Update(Boss& b) override {
     ++t_;
+    const BossTuning& T = Tuning(b.Phase());
+    constexpr int kStart = 24;
     b.FloatMove();
-    b.charge = t_ < 30 ? static_cast<float>(t_) / 30.f : 0.f;
-    if (t_ >= 30 && t_ < 130 && t_ % 8 == 0) {
+    b.charge = t_ < kStart ? static_cast<float>(t_) / static_cast<float>(kStart) : 0.f;
+    if (t_ >= kStart && t_ < kStart + T.rainFrames && (t_ - kStart) % T.rainInterval == 0) {
       const float px = b.PlayerCenter().x;
-      const float x = n_ % 2 ? RandRange(60.f, kW - 60.f) : Clamp(px + RandRange(-110.f, 110.f), 50.f, kW - 50.f);
-      b.FireOrb({x, 20.f}, kPi / 2.f, 5.5f + static_cast<float>(b.Phase()) * 0.6f);
+      const float x = n_ % 3 == 0 ? RandRange(60.f, kW - 60.f) : Clamp(px + RandRange(-100.f, 100.f), 50.f, kW - 50.f);
+      b.FireOrb({x, 20.f}, kPi / 2.f, T.rainSpeed);
       ++n_;
     }
-    if (t_ >= 160) b.ToFloat();
+    if (t_ >= kStart + T.rainFrames + 30) b.ToFloat();
   }
 };
 
-// 그림자 기둥: 플레이어 주변 바닥에 마법진 예고 후 기둥 분출 (2단계부터 2연속)
+// 그림자 기둥: 플레이어 주변 바닥에 마법진 예고 후 기둥 분출 (여러 번 연속)
 class PillarState : public BossStateBase {
  public:
   const char* Name() const override { return "Pillar"; }
   void Update(Boss& b) override {
     ++t_;
     World& w = b.GetWorld();
-    const int ph = b.Phase();
+    const BossTuning& T = Tuning(b.Phase());
+    constexpr int kFirst = 26, kGap = 44;
     b.FloatMove();
-    b.charge = t_ < 30 ? static_cast<float>(t_) / 30.f : 0.f;
-    if (t_ == 30 || (ph >= 1 && t_ == 90)) {
-      const int count = 2 + ph;
+    b.charge = t_ < kFirst ? static_cast<float>(t_) / static_cast<float>(kFirst) : 0.f;
+    if (t_ >= kFirst && (t_ - kFirst) % kGap == 0 && (t_ - kFirst) / kGap < T.pillarWaves) {
       const float px = b.PlayerCenter().x;
-      for (int i = 0; i < count; ++i) {
-        w.Spawn<PillarHazard>(Clamp(px + (static_cast<float>(i) - static_cast<float>(count - 1) / 2.f) * 95.f, 50.f, kW - 50.f));
+      for (int i = 0; i < T.pillarCount; ++i) {
+        const float x = px + (static_cast<float>(i) - static_cast<float>(T.pillarCount - 1) / 2.f) * 90.f;
+        w.Spawn<PillarHazard>(Clamp(x, 50.f, kW - 50.f), T.pillarWarn);
       }
       w.Snd().Play(Sfx::PillarWarn);
     }
-    if (t_ >= (ph >= 1 ? 170 : 110)) b.ToFloat();
+    if (t_ >= kFirst + (T.pillarWaves - 1) * kGap + T.pillarWarn + 40) b.ToFloat();
   }
 };
 
-// 돌진: 반대편 벽으로 이동해 기를 모은 뒤 바닥을 가로질러 달린다. 끝난 뒤 빈틈(1.5배)
+// 바닥 질주: 반대편 벽으로 이동해 기를 모은 뒤 바닥을 가로질러 달린다. 끝난 뒤 빈틈(1.5배)
 class DashState : public BossStateBase {
  public:
   const char* Name() const override { return "Dash"; }
   void Update(Boss& b) override {
     ++t_;
     World& w = b.GetWorld();
+    const BossTuning& T = Tuning(b.Phase());
     if (t_ == 1) {
       const float px = b.PlayerCenter().x;
       targetX_ = px < kW / 2.f ? kW - 100.f : 100.f;
-      dashV_ = (targetX_ > kW / 2.f ? -1.f : 1.f) * (9.f + static_cast<float>(b.Phase()) * 1.5f);
+      dashV_ = (targetX_ > kW / 2.f ? -1.f : 1.f) * T.dashSpeed;
     }
     if (sub_ == 0) {
-      b.pos.x += Clamp((targetX_ - b.pos.x) * 0.08f, -8.f, 8.f);
-      b.pos.y += (424.f - b.pos.y) * 0.1f;
-      b.charge = std::min(1.f, static_cast<float>(t_) / 50.f);
-      if ((t_ >= 55 && std::fabs(b.pos.x - targetX_) < 14.f) || t_ >= 110) {
+      b.pos.x += Clamp((targetX_ - b.pos.x) * 0.1f, -10.f, 10.f);
+      b.pos.y += (424.f - b.pos.y) * 0.12f;
+      b.charge = std::min(1.f, static_cast<float>(t_) / static_cast<float>(T.dashWindup));
+      if ((t_ >= T.dashWindup && std::fabs(b.pos.x - targetX_) < 14.f) || t_ >= T.dashWindup + 50) {
         sub_ = 1; t_ = 0; b.charge = 0.f; b.contactEnabled = true;  // 질주 중에만 접촉 피해
         w.Snd().Play(Sfx::BossDash);
       }
@@ -267,7 +275,7 @@ class DashState : public BossStateBase {
         w.Fx().Shake(14.f);
         w.Snd().Play(Sfx::BossSlam);
       }
-    } else if (t_ >= 45) {
+    } else if (t_ >= T.dashRest) {
       b.ToFloat();
     }
   }
@@ -276,17 +284,19 @@ class DashState : public BossStateBase {
   float targetX_ = 0.f, dashV_ = 0.f;
 };
 
-// 순간이동: 사라졌다가 반대편에 나타나 5갈래 탄을 두 번 쏜다 (사라지는 동안 무적)
+// 순간이동: 사라졌다가 반대편에 나타나 부채꼴 탄을 여러 번 쏜다 (사라지는 동안 무적)
 class BlinkState : public BossStateBase {
  public:
   const char* Name() const override { return "Blink"; }
   void Update(Boss& b) override {
     ++t_;
     World& w = b.GetWorld();
+    const BossTuning& T = Tuning(b.Phase());
     const Vec2 pc = b.PlayerCenter();
+    constexpr int kFirst = 26, kGap = 22;
     if (sub_ == 0) {
       b.invulnerable = true;
-      b.alpha = std::max(0.f, b.alpha - 0.06f);
+      b.alpha = std::max(0.f, b.alpha - 0.09f);
       if (b.alpha <= 0.f) {
         sub_ = 1; t_ = 0;
         b.pos.x = Clamp(kW - pc.x, 110.f, kW - 110.f);
@@ -296,81 +306,82 @@ class BlinkState : public BossStateBase {
         w.Snd().Play(Sfx::BossBlink);
       }
     } else {
-      b.alpha = std::min(1.f, b.alpha + 0.06f);
+      b.alpha = std::min(1.f, b.alpha + 0.09f);
       if (b.alpha >= 1.f) b.invulnerable = false;
-      b.charge = t_ < 30 ? static_cast<float>(t_) / 30.f : 0.f;
-      if (t_ == 30 || t_ == 55) {
+      b.charge = t_ < kFirst ? static_cast<float>(t_) / static_cast<float>(kFirst) : 0.f;
+      if (t_ >= kFirst && (t_ - kFirst) % kGap == 0 && (t_ - kFirst) / kGap < T.blinkWaves) {
         const float base = std::atan2(pc.y - b.pos.y, pc.x - b.pos.x);
-        for (int i = -2; i <= 2; ++i) b.FireOrb(b.pos, base + static_cast<float>(i) * 0.3f, 4.6f);
+        const int half = T.blinkCount / 2;
+        for (int i = -half; i <= half; ++i) b.FireOrb(b.pos, base + static_cast<float>(i) * 0.26f, T.blinkSpeed);
         w.Snd().Play(Sfx::BossShoot);
       }
-      if (t_ >= 85) b.ToFloat();
+      if (t_ >= kFirst + (T.blinkWaves - 1) * kGap + 30) b.ToFloat();
     }
   }
 };
 
-
-// 소용돌이 탄막: 멀리서 회전하는 탄 줄기를 연달아 뿌린다 (단계가 오를수록 줄기 수 증가)
+// 소용돌이 탄막: 멀리서 회전하는 탄 줄기를 연달아 뿌린다
 class SpiralState : public BossStateBase {
  public:
   const char* Name() const override { return "Spiral"; }
   void Update(Boss& b) override {
     ++t_;
-    const int ph = b.Phase();
+    const BossTuning& T = Tuning(b.Phase());
+    constexpr int kStart = 26;
     b.FloatMove();
-    b.charge = t_ < 30 ? static_cast<float>(t_) / 30.f : 0.f;
-    if (t_ >= 30 && t_ < 130 && t_ % 5 == 0) {
-      const int arms = 2 + ph;
-      const float base = static_cast<float>(t_) * 0.16f;
-      for (int i = 0; i < arms; ++i) b.FireOrb(b.pos, base + static_cast<float>(i) * 2.f * kPi / static_cast<float>(arms), 3.f + static_cast<float>(ph) * 0.3f);
-      if (t_ % 20 == 0) b.GetWorld().Snd().Play(Sfx::BossShoot);
+    b.charge = t_ < kStart ? static_cast<float>(t_) / static_cast<float>(kStart) : 0.f;
+    if (t_ >= kStart && t_ < kStart + T.spiralFrames && (t_ - kStart) % T.spiralInterval == 0) {
+      const float base = static_cast<float>(t_) * 0.15f;
+      for (int i = 0; i < T.spiralArms; ++i) b.FireOrb(b.pos, base + static_cast<float>(i) * 2.f * kPi / static_cast<float>(T.spiralArms), T.spiralSpeed);
+      if ((t_ - kStart) % 20 == 0) b.GetWorld().Snd().Play(Sfx::BossShoot);
     }
-    if (t_ >= 170) b.ToFloat();
+    if (t_ >= kStart + T.spiralFrames + 36) b.ToFloat();
   }
 };
 
-// 유도탄: 플레이어를 향해 천천히 휘어지며 따라오는 구슬. 일정 시간 뒤 사라지므로 피하거나 멀리 돌면 된다.
+// 유도탄: 플레이어를 향해 휘어지며 따라오는 구슬. 일정 시간 뒤 사라지므로 빙 돌아 피하면 된다.
 class HomingState : public BossStateBase {
  public:
   const char* Name() const override { return "Homing"; }
   void Update(Boss& b) override {
     ++t_;
-    const int ph = b.Phase();
+    const BossTuning& T = Tuning(b.Phase());
+    constexpr int kFirst = 32, kGap = 30;
     b.FloatMove();
-    b.charge = t_ < 40 ? static_cast<float>(t_) / 40.f : 0.f;
-    if (t_ == 40) {
-      const int count = 2 + ph;
+    b.charge = t_ < kFirst ? static_cast<float>(t_) / static_cast<float>(kFirst) : 0.f;
+    if (t_ >= kFirst && (t_ - kFirst) % kGap == 0 && (t_ - kFirst) / kGap < T.homingWaves) {
       const Vec2 pc = b.PlayerCenter();
       const float base = std::atan2(pc.y - b.pos.y, pc.x - b.pos.x);
-      for (int i = 0; i < count; ++i) {
-        b.FireHomingOrb(b.pos, base + (static_cast<float>(i) - static_cast<float>(count - 1) / 2.f) * 0.6f, 2.6f, 0.022f, 150);
+      for (int i = 0; i < T.homingCount; ++i) {
+        b.FireHomingOrb(b.pos, base + (static_cast<float>(i) - static_cast<float>(T.homingCount - 1) / 2.f) * 0.55f, T.homingSpeed, T.homingTurn, 150);
       }
       b.GetWorld().Snd().Play(Sfx::BossShoot);
     }
-    if (t_ >= 70) b.ToFloat();
+    if (t_ >= kFirst + (T.homingWaves - 1) * kGap + 30) b.ToFloat();
   }
 };
 
 // 돌격: 기를 모으며 조준선으로 플레이어 위치를 고정해 보여 준 뒤(예고), 그 선을 따라 몸으로 달려든다.
 // 바닥에 닿으면 바닥을 따라 계속 질주하다가 멈추고, 그 뒤 잠시 빈틈이 생긴다(피해 1.5배).
-// 3단계에서는 연속 2회.
+// 단계가 오를수록 예고가 짧고 빠르며, 연속 횟수가 늘어난다.
 class LungeState : public BossStateBase {
  public:
   const char* Name() const override { return "Lunge"; }
   void Update(Boss& b) override {
     ++t_;
     World& w = b.GetWorld();
-    const int ph = b.Phase();
+    const BossTuning& T = Tuning(b.Phase());
+    constexpr int kLockAt = 14;
     if (sub_ == 0) {
-      if (t_ < 15) b.FloatMove();  // 조준을 고정하기 전까지는 천천히 떠 있다
-      b.charge = std::min(1.f, static_cast<float>(t_) / 50.f);
-      if (t_ == 15) {  // 조준 고정: 이후 이 선을 따라 돌진한다
+      if (t_ < kLockAt) b.FloatMove();  // 조준을 고정하기 전까지는 천천히 떠 있다
+      b.charge = std::min(1.f, static_cast<float>(t_) / static_cast<float>(T.lungeWindup));
+      if (t_ == kLockAt) {  // 조준 고정: 이후 이 선을 따라 돌진한다
         const Vec2 pc = b.PlayerCenter();
         angle_ = std::atan2(pc.y - b.pos.y, pc.x - b.pos.x);
         b.beam = BeamInfo{true, false, angle_, 1};
         w.Snd().Play(Sfx::BeamCharge);
       }
-      if (t_ >= 55) {
+      if (t_ >= T.lungeWindup) {
         sub_ = 1; t_ = 0; traveled_ = 0.f; onFloor_ = false;
         b.charge = 0.f;
         b.beam.active = false;
@@ -378,7 +389,7 @@ class LungeState : public BossStateBase {
         w.Snd().Play(Sfx::BossDash);
       }
     } else if (sub_ == 1) {
-      const float speed = 13.f + static_cast<float>(ph) * 1.5f;
+      const float speed = T.lungeSpeed;
       float vx = std::cos(angle_) * speed, vy = std::sin(angle_) * speed;
       if (onFloor_) { vx = (vx >= 0.f ? 1.f : -1.f) * speed; vy = 0.f; }  // 바닥을 따라 질주
       b.pos.x += vx;
@@ -397,8 +408,8 @@ class LungeState : public BossStateBase {
         w.Fx().Shake(12.f);
         w.Snd().Play(Sfx::BossSlam);
       }
-    } else if (t_ >= 45) {
-      if (ph >= 2 && n_ < 1) { ++n_; sub_ = 0; t_ = 0; b.damageMultiplier = 1.f; }
+    } else if (t_ >= T.lungeRest) {
+      if (n_ < T.lungeExtra) { ++n_; sub_ = 0; t_ = 0; b.damageMultiplier = 1.f; }
       else b.ToFloat();
     }
   }

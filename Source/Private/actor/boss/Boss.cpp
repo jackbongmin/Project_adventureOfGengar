@@ -9,6 +9,7 @@
 #include "art/Art.h"
 #include "core/Config.h"
 #include "core/DebugOptions.h"
+#include "data/BossTuning.h"
 #include "core/Random.h"
 #include "platform/Audio.h"
 #include "platform/Graphics.h"
@@ -24,10 +25,7 @@ Boss::Boss(Vec2 center, int maxHp) : Actor(ActorKind::Boss), machine_(*this), hp
   machine_.Apply();
 }
 
-float Boss::PhaseSpeed() const {
-  static const float speeds[3] = {1.8f, 2.4f, 3.2f};
-  return speeds[Clamp(phase_, 0, 2)];
-}
+float Boss::PhaseSpeed() const { return Tuning(phase_).moveSpeed; }
 
 Vec2 Boss::PlayerCenter() const { return world_->GetPlayer().Bounds().Center(); }
 
@@ -50,7 +48,7 @@ void Boss::StartAttack(BossAttack attack) {
 
 // 플레이어를 몸으로 쫓지 않고, 약 250px 거리를 둔 채 둥실 떠다닌다. 벽에 몰리면 반대편으로 넘어간다.
 void Boss::FloatMove() {
-  constexpr float kW = static_cast<float>(cfg::kScreenW), kKeepDistance = 250.f;
+  constexpr float kW = static_cast<float>(cfg::kScreenW), kKeepDistance = 230.f;
   const float pc = PlayerCenter().x, dx = pos.x - pc;
   if (std::fabs(dx) > 80.f) sideDir_ = dx > 0.f ? 1 : -1;
   float desired = pc + static_cast<float>(sideDir_) * kKeepDistance;
@@ -60,7 +58,7 @@ void Boss::FloatMove() {
   }
   desired = Clamp(desired + std::sin(static_cast<float>(tick_) * 0.02f) * 40.f, 110.f, kW - 110.f);
   const float sp = PhaseSpeed();
-  pos.x += Clamp((desired - pos.x) * 0.03f, -sp, sp);
+  pos.x += Clamp((desired - pos.x) * 0.05f, -sp, sp);
   pos.y += (330.f + std::sin(static_cast<float>(tick_) * 0.04f) * 45.f - pos.y) * 0.06f;
 }
 
