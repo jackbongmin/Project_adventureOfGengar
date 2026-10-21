@@ -28,6 +28,7 @@ void Apply(const std::string& key, const std::string& value) {
   else if (key == "immortal") g_options.immortal = Truthy(value);
   else if (key == "shop") g_options.startInShop = Truthy(value);
   else if (key == "heartdemo") g_options.heartDemo = Truthy(value);
+  else if (key == "heightdemo") g_options.heightDemo = Truthy(value);
   else if (key == "hp") g_options.startHp = std::atoi(value.c_str());
 }
 

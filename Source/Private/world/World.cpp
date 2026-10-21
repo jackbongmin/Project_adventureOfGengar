@@ -22,6 +22,11 @@ World::World(GameContext& ctx, int stageIndex)
     : ctx_(ctx), stage_(stageIndex), level_(BuildStage(stageIndex)) {
   player_ = Spawn<Player>(Vec2{2.f * cfg::kTile, 13.f * cfg::kTile}, stats::MaxHp(ctx_.session));
   if (Debug().startHp > 0) player_->SetHp(Debug().startHp);
+  if (Debug().heightDemo) {  // 스테이지 1의 낮은 발판(12행) 위에 플레이어, 바로 아래 바닥에 추적 중인 늑대
+    constexpr float T = static_cast<float>(cfg::kTile);
+    player_->pos = {13.f * T, 12.f * T - 31.f};
+    Spawn<Hound>(Vec2{14.f * T, 15.f * T - 24.f}, stage_)->ForceAlert();
+  }
   if (Debug().heartDemo) Spawn<Heart>(Vec2{3.f * cfg::kTile + 16.f, 14.f * cfg::kTile + 16.f});
   for (const SpawnPoint& sp : level_.Spawns()) {
     switch (sp.type) {

@@ -5,7 +5,7 @@
 //   bot   : 자동 플레이 봇이 조종    god   : 피격 무적(낙사는 여전히 사망)
 //   speed : 배속(로직 스텝 배율)     log   : 주요 이벤트를 콘솔에 출력
 //   bosshp / bossphase(0~2) / immortal : 보스전 검증용 (체력 지정, 시작 단계, 불사)
-//   shop  : 시작하자마자 상점 화면   heartdemo / hp=N : 하트 규칙 검증용
+//   shop  : 시작하자마자 상점 화면   heartdemo / hp=N : 하트 규칙 검증용   heightdemo : 늑대 추적 포기 검증용
 namespace gengar {
 
 struct DebugOptions {
@@ -20,6 +20,7 @@ struct DebugOptions {
   bool immortal = false;  // 보스가 피해를 받지 않음 (패턴 검증용)
   bool startInShop = false;  // 시작하자마자 상점 화면 (상점 UI 검증용)
   bool heartDemo = false;    // 시작 지점 근처에 하트를 하나 추가 (하트 규칙 검증용)
+  bool heightDemo = false;   // 플레이어를 위 발판에 올리고 아래에 추적 중인 늑대 배치 (추적 포기 검증용)
   int startHp = 0;           // >0 이면 플레이어 시작 체력
 };
 

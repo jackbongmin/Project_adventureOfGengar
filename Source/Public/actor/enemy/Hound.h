@@ -1,5 +1,6 @@
 #pragma once
 #include "actor/enemy/Enemy.h"
+#include "controller/ChaseController.h"
 
 namespace gengar {
 
@@ -8,6 +9,10 @@ class Hound : public Enemy {
  public:
   Hound(Vec2 pos, int stage);
   void Render(Graphics& gfx, const World& world) override;
+  void ForceAlert();  // 검증용: 즉시 추적 상태로 만든다
+
+ private:
+  ChaseController* chase_ = nullptr;  // 소유는 Character 의 controller_
 
  protected:
   Color DeathColor() const override { return Hex(0x8a5cd0); }

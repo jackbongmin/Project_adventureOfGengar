@@ -12,9 +12,13 @@ namespace gengar {
 Hound::Hound(Vec2 p, int stage) : Enemy(p, {34.f, 24.f}, 3 + stage) {
   moveSpeed_ = 2.1f + 0.25f * static_cast<float>(stage);  // 추적 속도
   jumpSpeed_ = 9.5f;
-  SetController(std::make_unique<ChaseController>(0.7f / moveSpeed_));  // 순찰 속도 0.7
+  auto chase = std::make_unique<ChaseController>(0.7f / moveSpeed_);  // 순찰 속도 0.7
+  chase_ = chase.get();
+  SetController(std::move(chase));
   facing_ = -1;
 }
+
+void Hound::ForceAlert() { if (chase_) chase_->ForceAggro(); }
 
 void Hound::Render(Graphics& g, const World& w) {
   const art::Assets& a = art::A();
