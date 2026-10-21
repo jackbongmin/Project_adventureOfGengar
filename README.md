@@ -111,6 +111,7 @@ cmake --build build --config Release
 | `shop=1` | 시작하자마자 상점 (타이틀에서 Enter) |
 | `bossphase=0~2` `bosshp=N` `immortal=1` | 보스전 검증: 시작 단계 / 체력 / 불사 |
 | `heartdemo=1` | 시작 지점에 하트 추가 |
+| `heightdemo=1` | 플레이어를 위 발판에 올리고 아래에 추적 중인 늑대를 배치 (추적 포기 검증, 타이틀에서 Enter) |
 
 예: `index.html?bot=1&god=1&log=1&speed=8` 은 처음부터 엔딩까지 자동으로 진행한다. 웹 빌드는 로그를 `window.__logs`에도 모아 둔다.
 

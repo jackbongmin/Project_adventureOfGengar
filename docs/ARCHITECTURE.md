@@ -42,7 +42,7 @@ main -> Game ──(현재 하나)──> GameMode  (Title / Play / Shop / GameO
 |---|---|---|
 | PlayerController | Player | 키보드 -> Intent |
 | PatrolController | Slime | 벽/낭떠러지/가시에서 방향 전환 |
-| ChaseController | Hound | 범위 안이면 추적, 벗어나면 순찰 |
+| ChaseController | Hound | 같은 높이의 플레이어가 범위 안이면 추적. 멀어지거나 높이 차이가 1초 넘게 이어지면 포기하고 순찰(포기 후 2.5초간 재추적 금지) |
 | TurretController | Caster | 사거리 안이면 조준 사격 |
 | FlyController | Bat | 사인파 비행 |
 | BotController | Player(검증용) | 자동 플레이 봇. 사람 대신 Intent를 만든다 |
