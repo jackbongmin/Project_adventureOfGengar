@@ -34,6 +34,7 @@ class Player : public Character {
   Intent intent_;
   int coyote_ = 0;
   int jumpBuffer_ = 0;
+  int airJumpsLeft_ = 0;  // 이번 체공 중 남은 공중 점프 (착지하면 다시 채워진다)
   int invuln_ = 0;
   int cooldown_ = 0;
   int animFrame_ = 0;

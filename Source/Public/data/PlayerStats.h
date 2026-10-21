@@ -14,7 +14,9 @@ inline int FireCooldown(const Session& s) { return std::max(9, 24 - s.Level(Upgr
 // 사거리 = 속도 8px * 수명. 기본 약 290px, 최대 약 380px.
 inline int ShotLife(const Session& s) { return 36 + s.Level(UpgradeId::Power) * 3; }
 inline float ShotRadius(const Session& s) { return 7.f + static_cast<float>(s.Level(UpgradeId::Power)) * 1.3f; }
-inline float JumpSpeed(const Session& s) { return 11.8f + static_cast<float>(s.Level(UpgradeId::Jump)) * 0.9f; }
+inline float JumpSpeed(const Session&) { return 11.8f; }
+// 공중 점프 횟수 (이단 점프 업그레이드)
+inline int AirJumps(const Session& s) { return s.Level(UpgradeId::DoubleJump); }
 inline float MoveSpeed(const Session& s) { return 3.4f + static_cast<float>(s.Level(UpgradeId::Speed)) * 0.45f; }
 inline float UltDamage(const Session& s) {
   return 6.f + static_cast<float>(s.Level(UpgradeId::Ult)) * 3.f + static_cast<float>(s.Level(UpgradeId::Power)) * 2.f;

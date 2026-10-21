@@ -12,7 +12,7 @@ const std::vector<UpgradeDef>& AllUpgrades() {
       {UpgradeId::Rate, "FIRE RATE", "SHOOT FASTER", 3, {20, 35, 50}},
       {UpgradeId::Multi, "MULTI SHOT", "MORE BALLS PER SHOT", 2, {40, 80}},
       {UpgradeId::MaxHp, "MAX HEARTS", "+1 HEART", 4, {20, 30, 45, 60}},
-      {UpgradeId::Jump, "JUMP HEIGHT", "JUMP HIGHER", 3, {15, 25, 40}},
+      {UpgradeId::DoubleJump, "DOUBLE JUMP", "JUMP AGAIN IN MID-AIR", 1, {45}},
       {UpgradeId::Speed, "MOVE SPEED", "RUN FASTER", 3, {15, 25, 40}},
       {UpgradeId::Ult, "ULTIMATE POWER", "BIGGER ULT, FASTER GAUGE", 3, {30, 50, 75}},
       {UpgradeId::Life, "EXTRA LIFE", "+1 LIFE", 3, {40, 60, 80}},
@@ -46,10 +46,8 @@ UpgradePreview PreviewUpgrade(const UpgradeDef& def, const Session& s) {
       return {"BALLS PER SHOT", Fmt("%.0f -> %.0f", stats::ShotCount(s), stats::ShotCount(next))};
     case UpgradeId::MaxHp:
       return {"MAX HEARTS", Fmt("%.0f -> %.0f", stats::MaxHp(s), stats::MaxHp(next))};
-    case UpgradeId::Jump: {
-      auto height = [](const Session& x) { const double v = stats::JumpSpeed(x); return v * v / (2.0 * 0.55); };
-      return {"JUMP HEIGHT (PX)", Fmt("%.0f -> %.0f", height(s), height(next))};
-    }
+    case UpgradeId::DoubleJump:
+      return {"AIR JUMPS", Fmt("%.0f -> %.0f", stats::AirJumps(s), stats::AirJumps(next))};
     case UpgradeId::Speed:
       return {"MOVE SPEED", Fmt("%.1f -> %.1f", stats::MoveSpeed(s), stats::MoveSpeed(next))};
     case UpgradeId::Ult:

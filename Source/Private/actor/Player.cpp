@@ -82,6 +82,18 @@ void Player::Update(World& w) {
     w.Fx().Dust(feet, 6);
     squash_ = {0.75f, 1.3f};  // 위로 쭉 늘어난다
   }
+  if (onGround_) airJumpsLeft_ = stats::AirJumps(s);
+  // 이단 점프: 공중에서 "이번 프레임에 막 누른" 점프만 쓴다 (착지 직전 버퍼 입력은 땅 점프로 남긴다)
+  if (intent_.jumpPressed && jumpBuffer_ > 0 && coyote_ == 0 && !onGround_ && airJumpsLeft_ > 0) {
+    --airJumpsLeft_;
+    vel.y = -stats::JumpSpeed(s) * 0.92f;
+    jumpBuffer_ = 0;
+    dashTimer_ = 0;
+    squash_ = {0.7f, 1.35f};
+    const Vec2 c{pos.x + size.x * 0.5f, pos.y + size.y};
+    w.Fx().Burst(c, 10, Hex(0xd9b8ff), 2.5f, 18.f);  // 발밑에서 보랏빛이 팡
+    w.Snd().Tone(520.f, 1040.f, 0.1f, Wave::Square, 0.05f);
+  }
   if (!intent_.jumpHeld && vel.y < -3.5f) vel.y *= 0.8f;
 
   if (dashTimer_ == 0) vel.y = std::min(vel.y + cfg::kGravity, cfg::kMaxFall);  // 대시 중에는 수평으로 곧게

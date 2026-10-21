@@ -4,7 +4,7 @@
 
 namespace gengar {
 
-enum class UpgradeId { Power, Rate, Multi, MaxHp, Jump, Speed, Ult, Life, Count };
+enum class UpgradeId { Power, Rate, Multi, MaxHp, DoubleJump, Speed, Ult, Life, Count };
 constexpr int kUpgradeCount = static_cast<int>(UpgradeId::Count);
 
 struct Session {
