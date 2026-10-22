@@ -34,12 +34,12 @@ constexpr int kFadeOut = 1120;
 constexpr int kEnd = 1180;
 
 const CutsceneBeat kBeats[] = {
-    {0, kHatShine, "", "PHANTOM HAD ONE TREASURE IT LOVED\nMORE THAN ANYTHING..."},
-    {kHatShine, kDarken, "", "...A SHINING TREASURE HAT!"},
-    {kDarken, 600, "", "BUT ONE NIGHT, THE LORD OF THE VOID,\nVOIDMAW, APPEARED!"},
-    {600, kFlee, "VOIDMAW", "WHAT A SHINY LITTLE HAT...\nIT'S MINE NOW! HAHAHA!"},
-    {kFlee, kResolve, "", "VOIDMAW FLED TO THE THRONE OF THE VOID."},
-    {kResolve, kRun, "PHANTOM", "MY HAT...!\nI'LL GET IT BACK, NO MATTER WHAT!"},
+    {0, kHatShine, "", "PHANTOM HAD A SPECIAL TREASURE.\nIT LOVED IT SO MUCH."},
+    {kHatShine, kDarken, "", "IT WAS A SHINY TREASURE HAT!"},
+    {kDarken, 600, "", "BUT ONE NIGHT, A BIG MONSTER\nNAMED VOIDMAW CAME DOWN!"},
+    {600, kFlee, "VOIDMAW", "OH, WHAT A SHINY HAT!\nI WILL TAKE IT! HA HA HA!"},
+    {kFlee, kResolve, "", "VOIDMAW RAN AWAY WITH THE HAT."},
+    {kResolve, kRun, "PHANTOM", "MY HAT!\nI WILL GET IT BACK!"},
 };
 constexpr int kBeatCount = static_cast<int>(sizeof(kBeats) / sizeof(kBeats[0]));
 
@@ -83,13 +83,22 @@ void DrawBossHand(Graphics& g, Vec2 c, bool flip) {
 
 void IntroMode::Update(Game& game) {
   prev_ = t_;
-  ++t_;
+  ++blink_;
+  // 대사는 자동으로 넘어가지 않는다: 장면의 마지막 프레임에서 멈춰 Enter/Z를 기다린다.
+  const int cur = BeatAt(kBeats, kBeatCount, t_);
+  const bool waiting = cur >= 0 && t_ >= kBeats[cur].end - 1;
+  if (!waiting) ++t_;
   Input& in = game.In();
   if (skip_.Update(in)) { DebugLog("[intro] skipped at t=%d", t_); game.StartNewRun(); return; }
-  if (in.Pressed(Action::Confirm)) {  // 다음 장면으로
+  if (in.Pressed(Action::Confirm)) {
     const int beat = BeatAt(kBeats, kBeatCount, t_);
-    if (beat >= 0) t_ = std::max(t_, kBeats[beat].end);
-    DebugLog("[intro] next beat -> t=%d", t_);
+    if (beat >= 0) {
+      const CutsceneBeat& b = kBeats[beat];
+      const int typedAt = b.start + kFramesPerChar * static_cast<int>(std::strlen(b.text));
+      // 글자가 아직 나오는 중이면 먼저 전부 보여 주고, 다 보인 뒤에 누르면 다음 장면으로
+      t_ = (t_ < typedAt) ? std::min(typedAt, b.end - 1) : b.end;
+    }
+    DebugLog("[intro] next -> t=%d", t_);
   }
   if (t_ >= kEnd) { DebugLog("[intro] finished"); game.StartNewRun(); return; }
 
@@ -185,7 +194,7 @@ void IntroMode::Render(Graphics& g) {
   g.SetOffset(0.f, 0.f);
   DrawLetterbox(g, Ramp(t, 0, 40));
   const int beat = BeatAt(kBeats, kBeatCount, t);
-  if (beat >= 0) DrawDialog(g, kBeats[beat], t);
+  if (beat >= 0) DrawDialog(g, kBeats[beat], t, blink_);
   skip_.Render(g);
 
   // 페이드 인/아웃

@@ -10,6 +10,8 @@ namespace gengar {
 class Graphics;
 class Input;
 
+constexpr int kFramesPerChar = 2;  // 타자기 속도: 글자 하나가 나타나는 데 걸리는 프레임
+
 // 장면(비트) 하나 = 구간 + 대사. speaker가 비어 있으면 내레이션.
 struct CutsceneBeat {
   int start;
@@ -33,7 +35,8 @@ class SkipHold {
 // t 프레임에 해당하는 장면 번호 (없으면 -1)
 int BeatAt(const CutsceneBeat* beats, int count, int t);
 // 화면 아래 대사 상자. 글자는 한 글자씩(타자기) 나타난다.
-void DrawDialog(Graphics& g, const CutsceneBeat& beat, int t);
+// blinkT: "다음" 화살표 깜빡임에 쓰는 프레임. 장면이 멈춰 있어도 깜빡이게 t와 따로 줄 수 있다 (-1이면 t).
+void DrawDialog(Graphics& g, const CutsceneBeat& beat, int t, int blinkT = -1);
 // 위아래 검은 띠 (영화 느낌)
 void DrawLetterbox(Graphics& g, float amount01);
 void DrawNightSky(Graphics& g, int frame, Color top, Color bottom);

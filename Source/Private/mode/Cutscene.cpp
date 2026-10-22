@@ -12,7 +12,6 @@ namespace {
 
 constexpr float kW = static_cast<float>(cfg::kScreenW);
 constexpr float kH = static_cast<float>(cfg::kScreenH);
-constexpr int kFramesPerChar = 2;
 
 }  // namespace
 
@@ -40,7 +39,7 @@ int BeatAt(const CutsceneBeat* beats, int count, int t) {
   return -1;
 }
 
-void DrawDialog(Graphics& g, const CutsceneBeat& beat, int t) {
+void DrawDialog(Graphics& g, const CutsceneBeat& beat, int t, int blinkT) {
   if (beat.text == nullptr || beat.text[0] == '\0') return;
   const std::string full = beat.text;
   const int shown = std::clamp((t - beat.start) / kFramesPerChar, 0, static_cast<int>(full.size()));
@@ -61,7 +60,7 @@ void DrawDialog(Graphics& g, const CutsceneBeat& beat, int t) {
   const float ty = twoLines ? y + 16.f : y + 30.f;
   g.Text(visible.substr(0, nl), x + 24.f, ty, 3, Hex(0xffffff));
   if (nl != std::string::npos) g.Text(visible.substr(nl + 1), x + 24.f, ty + 30.f, 3, Hex(0xffffff));
-  if (shown == static_cast<int>(full.size()) && (t / 20) % 2 == 0) g.FillRect(x + w - 30.f, y + h - 22.f, 10, 6, Hex(0xffe27a));
+  if (shown == static_cast<int>(full.size()) && ((blinkT < 0 ? t : blinkT) / 20) % 2 == 0) g.FillRect(x + w - 30.f, y + h - 22.f, 10, 6, Hex(0xffe27a));
 }
 
 void DrawLetterbox(Graphics& g, float amount) {
