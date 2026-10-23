@@ -22,6 +22,7 @@ namespace gengar {
 
 World::World(GameContext& ctx, int stageIndex)
     : ctx_(ctx), stage_(stageIndex), level_(BuildStage(stageIndex)) {
+  actors_.reserve(256);
   player_ = Spawn<Player>(Vec2{2.f * cfg::kTile, 13.f * cfg::kTile}, stats::MaxHp(ctx_.session));
   if (Debug().startHp > 0) player_->SetHp(Debug().startHp);
   if (Debug().heightDemo) {  // 스테이지 1의 낮은 발판(12행) 위에 플레이어, 바로 아래 바닥에 추적 중인 늑대
@@ -54,7 +55,9 @@ World::World(GameContext& ctx, int stageIndex)
   ShowBanner(level_.Name(), 150);
 }
 
-World::~World() = default;
+World::~World() {
+  DebugLog("[world] pooled actors: created %d, reused %d", pooledCreated_, pooledReused_);
+}
 
 int World::CountAlive(ActorKind kind) const {
   return static_cast<int>(std::count_if(actors_.begin(), actors_.end(),
@@ -73,13 +76,22 @@ void World::Update() {
     Actor* a = actors_[i].get();
     if (!a->IsDead()) a->Update(*this);
   }
-  actors_.erase(std::remove_if(actors_.begin(), actors_.end(),
-                               [this](const std::unique_ptr<Actor>& a) {
-                                 if (!a->IsDead()) return false;
-                                 if (a.get() == static_cast<Actor*>(boss_)) boss_ = nullptr;
-                                 return true;
-                               }),
-                actors_.end());
+  // 죽은 액터 정리: 살아 있는 것은 앞으로 당기고, 풀링 대상은 풀로 돌려보내고, 나머지는 해제한다.
+  size_t keep = 0;
+  for (size_t i = 0; i < actors_.size(); ++i) {
+    std::unique_ptr<Actor>& a = actors_[i];
+    if (!a->IsDead()) {
+      if (keep != i) actors_[keep] = std::move(a);
+      ++keep;
+      continue;
+    }
+    if (a.get() == static_cast<Actor*>(boss_)) boss_ = nullptr;
+    if (a->pooled_) {
+      const Actor& dead = *a;
+      pools_[std::type_index(typeid(dead))].push_back(std::move(a));
+    }
+  }
+  actors_.resize(keep);  // 뒤에 남은 죽은 액터(풀링 대상이 아닌 것)가 여기서 해제된다
   fx_.Update();
   camera_.Update(player_->Bounds(), player_->Facing(), level_.PixelWidth());
   if (bannerTimer_ > 0) --bannerTimer_;

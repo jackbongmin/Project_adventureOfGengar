@@ -3,7 +3,10 @@
 // 액터는 Update(World&)로 이 객체를 통해 다른 액터/레벨/사운드에 접근한다.
 #include <algorithm>
 #include <memory>
+#include <new>
 #include <string>
+#include <typeindex>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -36,6 +39,29 @@ class World {
   T* Spawn(Args&&... args) {
     auto owned = std::make_unique<T>(std::forward<Args>(args)...);
     T* raw = owned.get();
+    actors_.push_back(std::move(owned));
+    return raw;
+  }
+  // 오브젝트 풀링: 투사체처럼 자주 생겼다 사라지는 액터용.
+  // 죽은 객체는 지우지 않고 타입별 풀에 돌려놓았다가, 같은 메모리에 생성자를 다시 호출해 재사용한다.
+  // (생성자가 곧 초기화 코드라서 따로 Reset 함수를 만들 필요가 없다. 이 게임은 예외를 쓰지 않는다.)
+  template <class T, class... Args>
+  T* SpawnPooled(Args&&... args) {
+    std::vector<std::unique_ptr<Actor>>& pool = pools_[std::type_index(typeid(T))];
+    std::unique_ptr<Actor> owned;
+    if (pool.empty()) {
+      owned = std::make_unique<T>(std::forward<Args>(args)...);
+      ++pooledCreated_;
+    } else {
+      owned = std::move(pool.back());
+      pool.pop_back();
+      T* old = static_cast<T*>(owned.get());
+      std::destroy_at(old);
+      ::new (static_cast<void*>(old)) T(std::forward<Args>(args)...);
+      ++pooledReused_;
+    }
+    owned->pooled_ = true;
+    T* raw = static_cast<T*>(owned.get());
     actors_.push_back(std::move(owned));
     return raw;
   }
@@ -103,6 +129,9 @@ class World {
   Camera camera_;
   Effects fx_;
   std::vector<std::unique_ptr<Actor>> actors_;
+  std::unordered_map<std::type_index, std::vector<std::unique_ptr<Actor>>> pools_;  // 타입별로 쉬고 있는 투사체
+  int pooledCreated_ = 0;  // 풀이 비어서 새로 만든 수 (로그용)
+  int pooledReused_ = 0;   // 풀에서 꺼내 재사용한 수 (로그용)
   Player* player_ = nullptr;
   Boss* boss_ = nullptr;
   int frame_ = 0;

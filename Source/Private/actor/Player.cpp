@@ -157,8 +157,8 @@ void Player::Shoot(World& w) {
   const float spreads[3][3] = {{0.f, 0.f, 0.f}, {-0.7f, 0.7f, 0.f}, {-1.5f, 0.f, 1.5f}};
   const Vec2 origin{pos.x + size.x * 0.5f + static_cast<float>(facing_) * 14.f, pos.y + 15.f};
   for (int i = 0; i < n; ++i) {
-    w.Spawn<ShadowBall>(origin, Vec2{static_cast<float>(facing_) * 8.f, spreads[n - 1][i]}, stats::ShotRadius(s),
-                        stats::Damage(s), stats::ShotLife(s));
+    w.SpawnPooled<ShadowBall>(origin, Vec2{static_cast<float>(facing_) * 8.f, spreads[n - 1][i]}, stats::ShotRadius(s),
+                              stats::Damage(s), stats::ShotLife(s));
   }
   w.Fx().Burst(origin, 5, Hex(0xc58bff), 2.2f, 10.f);  // 손끝에서 튀는 불꽃 (발사 임팩트)
   cooldown_ = stats::FireCooldown(s);

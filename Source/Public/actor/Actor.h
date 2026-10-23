@@ -31,8 +31,11 @@ class Actor {
   Vec2 size;
 
  private:
+  friend class World;  // 풀에서 꺼낸 객체 표시(pooled_)는 World 만 다룬다
+
   ActorKind kind_;
   bool dead_ = false;
+  bool pooled_ = false;  // World::SpawnPooled 로 만들어짐: 죽으면 지우지 않고 풀로 돌아간다
 };
 
 }  // namespace gengar

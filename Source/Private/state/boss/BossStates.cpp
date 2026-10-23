@@ -167,7 +167,7 @@ class SlamState : public BossStateBase {
         w.Snd().Play(Sfx::BossSlam);
         w.Fx().Burst({b.pos.x, kGroundY}, 24, Hex(0xd9a0ff), 5.f);
         for (int s = -1; s <= 1; s += 2) {
-          w.Spawn<Shockwave>(Vec2{b.pos.x + static_cast<float>(s) * 60.f, kGroundY - 11.f}, static_cast<float>(s) * T.slamWaveSpeed);
+          w.SpawnPooled<Shockwave>(Vec2{b.pos.x + static_cast<float>(s) * 60.f, kGroundY - 11.f}, static_cast<float>(s) * T.slamWaveSpeed);
         }
       }
     } else if (t_ >= T.slamRest) {
