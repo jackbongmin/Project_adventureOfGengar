@@ -11,7 +11,7 @@ namespace gengar {
 
 class World;
 
-enum class Tile : uint8_t { Empty = 0, Ground = 1, Brick = 2, Spike = 3, Crumble = 4 };
+enum class Tile : uint8_t { Empty = 0, Ground = 1, Brick = 2, Spike = 3, Crumble = 4, OneWay = 5 };  // OneWay: 공중에 뜬 발판. 아래에서 뛰어오르면 통과하고 위에서만 밟힌다.
 
 enum class SpawnType { Slime, Bat, Hound, Caster, Boss, Coin, Heart };
 
@@ -41,7 +41,8 @@ class Level {
   float PixelWidth() const { return static_cast<float>(width_ * cfg::kTile); }
 
   Tile At(int c, int r) const;
-  bool Solid(int c, int r) const;  // 지면/벽돌/무너지는 발판. 좌우 바깥은 벽, 위아래 바깥은 빈 공간.
+  bool Solid(int c, int r) const;  // 지면/벽돌/무너지는 발판/뜬 발판. 좌우 바깥은 벽, 위아래 바깥은 빈 공간.
+  bool OneWay(int c, int r) const { return At(c, r) == Tile::OneWay; }  // 위에서만 설 수 있는 발판 (캐릭터 충돌에서 따로 다룬다)
   void Set(int c, int r, Tile t);
 
   std::vector<SpawnPoint>& Spawns() { return spawns_; }

@@ -16,7 +16,7 @@ class Builder {
   explicit Builder(Level& level) : L(level) {}
 
   void Pit(int a, int b) { for (int x = a; x <= b; ++x) { L.Set(x, kGround, Tile::Empty); L.Set(x, kGround + 1, Tile::Empty); } }
-  void Plat(int a, int b, int row) { for (int x = a; x <= b; ++x) L.Set(x, row, Tile::Brick); }
+  void Plat(int a, int b, int row) { for (int x = a; x <= b; ++x) L.Set(x, row, Tile::OneWay); }  // 뜬 발판: 아래에서 통과해 올라간다
   void Spike(int a, int b) { for (int x = a; x <= b; ++x) L.Set(x, kGround - 1, Tile::Spike); }
   void Stack(int col, int h) { for (int k = 1; k <= h; ++k) L.Set(col, kGround - k, Tile::Brick); }
   void Crumble(int a, int b, int row) { L.AddCrumble(a, b, row); }

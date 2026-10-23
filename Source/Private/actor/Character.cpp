@@ -16,6 +16,9 @@ void Character::MoveAndCollide(const World& world) {
   const Level& lv = world.GetLevel();
   const float T = static_cast<float>(cfg::kTile);
 
+  // 뜬 발판(OneWay)은 옆과 아래에서는 막지 않는다.
+  auto wall = [&lv](int c, int r) { return lv.Solid(c, r) && !lv.OneWay(c, r); };
+
   // ---- X축 ----
   hitWall_ = false;
   pos.x += vel.x;
@@ -25,18 +28,19 @@ void Character::MoveAndCollide(const World& world) {
     if (vel.x > 0.f) {
       const int c = static_cast<int>(std::floor((pos.x + size.x - 0.01f) / T));
       for (int r = r0; r <= r1; ++r) {
-        if (lv.Solid(c, r)) { pos.x = static_cast<float>(c) * T - size.x; vel.x = 0.f; hitWall_ = true; break; }
+        if (wall(c, r)) { pos.x = static_cast<float>(c) * T - size.x; vel.x = 0.f; hitWall_ = true; break; }
       }
     } else if (vel.x < 0.f) {
       const int c = static_cast<int>(std::floor(pos.x / T));
       for (int r = r0; r <= r1; ++r) {
-        if (lv.Solid(c, r)) { pos.x = static_cast<float>(c + 1) * T; vel.x = 0.f; hitWall_ = true; break; }
+        if (wall(c, r)) { pos.x = static_cast<float>(c + 1) * T; vel.x = 0.f; hitWall_ = true; break; }
       }
     }
   }
 
   // ---- Y축 ----
   onGround_ = false;
+  const float prevBottom = pos.y + size.y;  // 이동 전 발바닥 높이: 뜬 발판은 이 선이 발판 윗면 위에 있었을 때만 밟는다
   pos.y += vel.y;
   {
     const int c0 = static_cast<int>(std::floor(pos.x / T));
@@ -44,12 +48,12 @@ void Character::MoveAndCollide(const World& world) {
     if (vel.y > 0.f) {
       const int r = static_cast<int>(std::floor((pos.y + size.y - 0.01f) / T));
       for (int c = c0; c <= c1; ++c) {
-        if (lv.Solid(c, r)) { pos.y = static_cast<float>(r) * T - size.y; vel.y = 0.f; onGround_ = true; break; }
+        if (lv.Solid(c, r) && (!lv.OneWay(c, r) || prevBottom <= static_cast<float>(r) * T + 1.f)) { pos.y = static_cast<float>(r) * T - size.y; vel.y = 0.f; onGround_ = true; break; }
       }
     } else if (vel.y < 0.f) {
       const int r = static_cast<int>(std::floor(pos.y / T));
       for (int c = c0; c <= c1; ++c) {
-        if (lv.Solid(c, r)) { pos.y = static_cast<float>(r + 1) * T; vel.y = 0.f; break; }
+        if (wall(c, r)) { pos.y = static_cast<float>(r + 1) * T; vel.y = 0.f; break; }
       }
     }
   }

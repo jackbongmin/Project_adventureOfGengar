@@ -108,7 +108,8 @@ void RenderLevelTiles(Graphics& gfx, const Level& level, float camX, int frame) 
       const float x = static_cast<float>(c) * T, y = static_cast<float>(r) * T;
       switch (tile) {
         case Tile::Ground: gfx.DrawSprite(level.Solid(c, r - 1) ? ts.dirt : ts.groundTop, x, y, art::kPixel); break;
-        case Tile::Brick: gfx.DrawSprite(ts.brick, x, y, art::kPixel); break;
+        case Tile::Brick:
+        case Tile::OneWay: gfx.DrawSprite(ts.brick, x, y, art::kPixel); break;
         case Tile::Spike: gfx.DrawSprite(ts.spike, x, y, art::kPixel); break;
         case Tile::Crumble: {
           const CrumbleGroup* g = level.CrumbleAt(c, r);
