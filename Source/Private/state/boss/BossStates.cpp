@@ -1,5 +1,6 @@
 #include "state/boss/BossStates.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "actor/Player.h"
@@ -434,7 +435,9 @@ class LungeState : public BossStateBase {
   bool onFloor_ = false;
 };
 
-// 십자포화: 양쪽 벽에서 가로 탄 줄이 번갈아 날아온다. 줄마다 한 칸은 비어 있어 그 틈으로 지나가면 된다.
+// 십자포화: 양쪽 벽에서 가로 탄 줄이 번갈아 날아온다. 줄마다 이웃한 두 칸이 비어 있어 그 틈으로 지나가면 된다.
+// 한 칸만 비우면 틈이 52px 인데 탄 판정(반지름 8 + 플레이어 11)을 빼면 실제로는 14px 이라 피할 수 없었다.
+// 두 칸을 비우면 실제 틈이 약 118px. 틈은 아래 4줄 안에만 두어서 맨바닥에 서 있거나 점프 한 번으로 닿게 한다.
 class CrossfireState : public BossStateBase {
  public:
   const char* Name() const override { return "Crossfire"; }
@@ -449,9 +452,10 @@ class CrossfireState : public BossStateBase {
       const int wave = (t_ - kFirst) / kGap;
       const bool fromLeft = wave % 2 == 0;
       const float top = kGroundY - 30.f - kRowGap * static_cast<float>(T.crossRows - 1);
-      const int hole = RandInt(0, T.crossRows - 1);
+      const int hole = RandInt(0, std::min(2, T.crossRows - 2));  // 아래에서 hole 번째와 그 위 줄이 빈다
       for (int i = 0; i < T.crossRows; ++i) {
-        if (i == hole) continue;
+        const int fromBottom = T.crossRows - 1 - i;
+        if (fromBottom == hole || fromBottom == hole + 1) continue;
         b.FireOrb({fromLeft ? -20.f : kW + 20.f, top + kRowGap * static_cast<float>(i)}, fromLeft ? 0.f : kPi, T.crossSpeed);
       }
       b.GetWorld().Snd().Play(Sfx::BossShoot);

@@ -11,7 +11,10 @@ namespace gengar::stats {
 inline float Lv(const Session& s, CardId id) { return static_cast<float>(s.Card(id)); }
 
 // ---- 공격 ----
-inline float Damage(const Session& s) { return 1.f + Lv(s, CardId::AttackUp); }
+// 유도탄은 맞히기 쉬운 대신 공격력 -1 (최소 1)
+inline float Damage(const Session& s) {
+  return std::max(1.f, 1.f + Lv(s, CardId::AttackUp) - (s.Has(CardId::Homing) ? 1.f : 0.f));
+}
 inline int ShotCount(const Session& s) { return 1 + s.Card(CardId::MultiShot); }
 // 발사 간격: 단계마다 15% 짧아진다 (24 -> 20 -> 17 -> 15 -> 13 프레임)
 inline int FireCooldown(const Session& s) {

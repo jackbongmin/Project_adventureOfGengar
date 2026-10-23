@@ -54,7 +54,7 @@ main -> Game ──(현재 하나)──> GameMode  (Title / Play / Shop / GameO
 - `PlayerStats.h`: 카드 단계 -> 능력치 수식 (공격력, 사거리, 연사, 점프, 대시 칸 등)
 - `BossPatterns.cpp`: 보스 단계별 패턴 목록 (보스가 이 중에서 무작위로 고르며, 같은 패턴이 연속으로 나오지는 않는다)
 - `BossTuning.cpp`: 보스 단계별 난이도 표. 이동 속도, 공격 사이 쉬는 시간, 패턴별 탄 수/속도/예고 시간을 "1단계, 2단계, 3단계" 순으로 한 곳에서 조정한다.
-- 보스 체력: 고정 320(`cfg::kBossHp`). 플레이어의 성장(카드)에 따라 늘어나지 않는다(`stats::BossMaxHp`).
+- 보스 체력: 고정 300(`cfg::kBossHp`). 플레이어의 성장(카드)에 따라 늘어나지 않는다(`stats::BossMaxHp`).
 - 카드 고르기 흐름: 적 처치 -> `World::AddXp` -> 레벨업마다 `pendingPicks_` +1 (보스전은 `Boss`가 체력 단계 전환 때 `QueueCardPick`) -> `PlayingPhase`가 `CardPickPhase`로 전환 -> `ui/CardPicker`가 카드 화면을 그리고 고른 카드를 `ApplyCard`. 상점은 같은 `CardPicker`를 50코인 뽑기에 쓴다.
 - 카드와 레벨(`Session::prog`)은 코인처럼 스테이지 시작 시점 스냅샷이 있어서, 사망 후 재도전하면 되돌아간다.
 - `core/Config.h`: 화면/타일/중력/보스 체력 등 전역 상수

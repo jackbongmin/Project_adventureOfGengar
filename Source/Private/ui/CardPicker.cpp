@@ -65,12 +65,21 @@ void DrawCardIconSlot(Graphics& g, CardId id, float x, float y, float size, int 
 }
 
 void DrawCard(Graphics& g, const CardDef& def, const Session& s, float x, float y, float w, float h, bool selected, int t) {
-  const Color gc = GradeColor(def.grade);
-  const bool fancy = def.grade == Grade::Epic || def.grade == Grade::Legend;
-  const float border = fancy ? 6.f : 4.f;
+  const bool legend = def.grade == Grade::Legend;
   const float tf = static_cast<float>(t);
+  const float pulse = 0.5f + 0.5f * std::sin(tf * 0.12f);
+  // 전설: 테두리 색이 금색과 흰색 사이를 오가며 숨 쉬듯 빛난다
+  const Color gc = legend ? Lerp(GradeColor(def.grade), Hex(0xfff6d0), 0.45f * pulse) : GradeColor(def.grade);
+  const float border = def.grade == Grade::Epic || legend ? 6.f : 4.f;
 
-  if (def.grade == Grade::Legend) g.Glow(x + w * 0.5f, y + h * 0.5f, w * 0.75f, Rgb(255, 201, 60, selected ? 60 : 30));
+  if (legend) {  // 전설: 테두리 바깥으로 번지는 금빛 후광 (안쪽일수록 진하다)
+    g.Glow(x + w * 0.5f, y + h * 0.5f, w * 0.8f, Rgb(255, 201, 60, selected ? 60 : 35));
+    for (int k = 5; k >= 1; --k) {
+      const float spread = static_cast<float>(k) * 4.f;
+      const int a = static_cast<int>((70.f - static_cast<float>(k) * 11.f) * (0.55f + 0.45f * pulse));
+      Box(g, x - spread, y - spread, w + 2.f * spread, h + 2.f * spread, 4.f, Rgb(255, 214, 90, a));
+    }
+  }
   Box(g, x + 6.f, y + 8.f, w, h, 4.f, Rgb(0, 0, 0, 140));       // 그림자
   if (selected) Box(g, x - 4.f, y - 4.f, w + 8.f, h + 8.f, 4.f, Hex(0xffffff));
   Box(g, x, y, w, h, 4.f, gc);                                    // 등급 테두리
@@ -85,14 +94,11 @@ void DrawCard(Graphics& g, const CardDef& def, const Session& s, float x, float 
       g.FillRect(p.x + 2.f, p.y - 2.f, 2.f, 6.f, c);
     }
   }
-  if (def.grade == Grade::Epic) {  // 영웅: 테두리를 따라 도는 빛 두 점
-    for (int k = 0; k < 2; ++k) {
-      const Vec2 p = PerimeterPoint(x + 3.f, y + 3.f, w - 6.f, h - 6.f, tf * 0.006f + static_cast<float>(k) * 0.5f);
-      g.Glow(p.x, p.y, 14.f, Rgb(255, 210, 255, 160));
-      g.FillRect(std::floor(p.x) - 2.f, std::floor(p.y) - 2.f, 4.f, 4.f, Hex(0xffffff));
-    }
+  if (def.grade == Grade::Epic) {  // 영웅: 테두리를 따라 천천히 도는 작은 빛 한 점 (전설보다 눈에 덜 띄게)
+    const Vec2 p = PerimeterPoint(x + 3.f, y + 3.f, w - 6.f, h - 6.f, tf * 0.005f);
+    g.FillRect(std::floor(p.x) - 2.f, std::floor(p.y) - 2.f, 4.f, 4.f, Hex(0xf6d0ff));
   }
-  if (def.grade == Grade::Legend) {  // 전설: 테두리 위에서 반짝이는 별
+  if (legend) {  // 전설: 테두리 위에서 반짝이는 별
     for (int k = 0; k < 6; ++k) {
       const float phase = std::sin(tf * 0.12f + static_cast<float>(k) * 1.7f);
       if (phase < 0.3f) continue;
