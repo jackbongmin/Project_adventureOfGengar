@@ -36,6 +36,7 @@ class Game {
   void StartAtStage(int stage);       // 메인 메뉴에서 해당 스테이지로 바로 시작 (앞 스테이지를 건너뛴 만큼 기본 강화 지급)
   void StartBossFromShop();           // 메인 메뉴의 BOSS BATTLE: 코인 150으로 상점 -> 보스전
   void StartStage(bool retry);       // 현재 session.stage 시작. retry면 스냅샷을 갱신하지 않는다.
+  void RestartStage();                // 일시정지 메뉴의 RESTART: 목숨 차감 없이 스테이지 시작 시점으로 되돌린다.
   void GoShop();                      // 스테이지 클리어 후 상점
   void LeaveShop();                   // 상점에서 다음 스테이지로
   void OnPlayerDefeated();            // 사망: 목숨 차감 후 재도전 또는 게임오버

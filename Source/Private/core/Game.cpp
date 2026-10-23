@@ -119,6 +119,12 @@ void Game::StartStage(bool retry) {
   ChangeMode(std::make_unique<PlayMode>(*this, session_.stage));
 }
 
+void Game::RestartStage() {
+  DebugLog("[game] stage %d restart from pause menu", session_.stage + 1);
+  session_.RestoreSnapshot();
+  StartStage(true);
+}
+
 void Game::GoShop() {
   DebugLog("[game] shop open coins=%d", session_.coins); ChangeMode(std::make_unique<ShopMode>(*this)); }
 

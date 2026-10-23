@@ -8,9 +8,9 @@
 #include "core/Config.h"
 #include "core/DebugOptions.h"
 #include "core/Game.h"
-#include "core/Settings.h"
 #include "platform/Graphics.h"
 #include "platform/Input.h"
+#include "ui/Menu.h"
 
 namespace gengar {
 namespace {
@@ -40,31 +40,7 @@ constexpr int kMainShown = kMainCount - 1;  // 웹에서는 종료 버튼이 의
 constexpr int kMainShown = kMainCount;
 #endif
 
-// 설정 항목
-enum SettingItem { kVolume, kShake, kJump, kBack, kSettingCount };
-
-const char* JumpName(JumpControl j) {
-  return j == JumpControl::Fixed ? "FIXED" : j == JumpControl::Variable ? "VARIABLE" : "SHORT TAP";
-}
-const char* JumpHint(JumpControl j) {
-  return j == JumpControl::Fixed ? "ALWAYS JUMP FULL HEIGHT"
-         : j == JumpControl::Variable ? "TAP = LOW JUMP, HOLD = HIGH JUMP"
-                                      : "TAP = VERY LOW JUMP, HOLD = HIGH JUMP";
-}
-const char* ShakeName(int s) { return s == 0 ? "OFF" : s == 1 ? "LOW" : "FULL"; }
-
 int Wrap(int v, int n) { return (v % n + n) % n; }
-
-// 항목 한 줄: 선택되면 화살표와 밝은 색으로 보여 준다.
-void DrawRow(Graphics& g, const std::string& text, float y, bool selected, int frame, Color idle = Hex(0xc9b0ee)) {
-  g.Text(text, W * 0.5f, y, 3, selected ? Hex(0xffe27a) : idle, Align::Center);
-  if (selected) {
-    const float bob = std::floor(std::sin(static_cast<float>(frame) * 0.2f) * 3.f);
-    const float half = static_cast<float>(text.size()) * 9.f + 26.f;  // scale 3 글자 폭(약 18px)의 절반
-    g.Text(">", W * 0.5f - half + bob, y, 3, Hex(0xffe27a), Align::Center);
-    g.Text("<", W * 0.5f + half - bob, y, 3, Hex(0xffe27a), Align::Center);
-  }
-}
 
 }  // namespace
 
@@ -112,27 +88,7 @@ void TitleMode::UpdateStages(Game& game) {
 }
 
 void TitleMode::UpdateSettings(Game& game) {
-  Input& in = game.In();
-  Settings& s = Prefs();
-  if (in.Pressed(Action::Pause)) { game.Snd().Play(Sfx::Select); Go(Screen::Main); cursor_ = kSettings; return; }
-  if (in.Pressed(Action::Up)) { cursor_ = Wrap(cursor_ - 1, kSettingCount); game.Snd().Play(Sfx::Select); }
-  if (in.Pressed(Action::Down)) { cursor_ = Wrap(cursor_ + 1, kSettingCount); game.Snd().Play(Sfx::Select); }
-  int dir = 0;  // 좌우로 값 변경, Enter 는 다음 값으로
-  if (in.Pressed(Action::Left)) dir = -1;
-  if (in.Pressed(Action::Right) || in.Pressed(Action::Confirm)) dir = 1;
-  if (dir == 0) return;
-  switch (cursor_) {
-    case kVolume:
-      s.volume = in.Pressed(Action::Confirm) ? (s.volume + 1) % 11 : Clamp(s.volume + dir, 0, 10);
-      game.Snd().SetVolume(static_cast<float>(s.volume) / 10.f);
-      game.Snd().Play(Sfx::Coin);  // 바뀐 크기를 바로 들려 준다
-      break;
-    case kShake: s.shake = Wrap(s.shake + dir, 3); game.Snd().Play(Sfx::Select); break;
-    case kJump: s.jump = static_cast<JumpControl>(Wrap(static_cast<int>(s.jump) + dir, 3)); game.Snd().Play(Sfx::Jump); break;
-    case kBack:
-      if (in.Pressed(Action::Confirm)) { game.Snd().Play(Sfx::Select); Go(Screen::Main); cursor_ = kSettings; }
-      break;
-  }
+  if (UpdateSettingsMenu(game, cursor_)) { Go(Screen::Main); cursor_ = kSettings; }
 }
 
 void TitleMode::Render(Graphics& g) {
@@ -169,7 +125,7 @@ void TitleMode::Render(Graphics& g) {
     g.Text("ADVENTURE OF GENGAR", W * 0.5f + 4.f, ty + 5.f, 7, Rgb(0, 0, 0, 120), Align::Center);  // 그림자
     g.Text("ADVENTURE OF GENGAR", W * 0.5f, ty, 7, Hex(0xd9b8ff), Align::Center);
     g.Text("THE LORD OF THE VOID AWAITS", W * 0.5f, ty + 66.f + std::floor(std::sin(tf * 0.05f + 0.8f) * 3.f), 2, Hex(0xffffff), Align::Center);
-    for (int i = 0; i < kMainShown; ++i) DrawRow(g, kMain[i].label, 262.f + static_cast<float>(i) * 34.f, i == cursor_, frame_);
+    for (int i = 0; i < kMainShown; ++i) DrawMenuRow(g, kMain[i].label, W * 0.5f, 262.f + static_cast<float>(i) * 34.f, i == cursor_, frame_);
     g.Text(kMain[cursor_].hint, W * 0.5f, 508, 2, Hex(0x9a82c0), Align::Center);
     return;
   }
@@ -177,8 +133,8 @@ void TitleMode::Render(Graphics& g) {
   g.Text(screen_ == Screen::Stages ? "STAGE SELECT" : screen_ == Screen::Controls ? "CONTROLS" : "SETTINGS", W * 0.5f, 60, 6, Hex(0xd9b8ff), Align::Center);
 
   if (screen_ == Screen::Stages) {
-    for (int i = 0; i < cfg::kBossStage; ++i) DrawRow(g, "STAGE " + std::to_string(i + 1), 190.f + static_cast<float>(i) * 50.f, i == cursor_, frame_);
-    DrawRow(g, "BACK", 190.f + static_cast<float>(cfg::kBossStage) * 50.f, cursor_ == cfg::kBossStage, frame_);
+    for (int i = 0; i < cfg::kBossStage; ++i) DrawMenuRow(g, "STAGE " + std::to_string(i + 1), W * 0.5f, 190.f + static_cast<float>(i) * 50.f, i == cursor_, frame_);
+    DrawMenuRow(g, "BACK", W * 0.5f, 190.f + static_cast<float>(cfg::kBossStage) * 50.f, cursor_ == cfg::kBossStage, frame_);
     g.Text("YOU START WITH THE UPGRADES YOU WOULD NORMALLY HAVE BOUGHT BY THEN", W * 0.5f, 480, 2, Hex(0x9a82c0), Align::Center);
     g.Text("ESC - BACK", W * 0.5f, 508, 2, Hex(0x9a82c0), Align::Center);
   } else if (screen_ == Screen::Controls) {
@@ -194,14 +150,7 @@ void TitleMode::Render(Graphics& g) {
     g.Text("COLLECT COINS, BUY UPGRADES IN THE SHOP, BEAT THE VOID LORD", W * 0.5f, 450, 2, Hex(0x9a82c0), Align::Center);
     g.Text("ENTER - BACK", W * 0.5f, 508, 2, Hex(0x9a82c0), Align::Center);
   } else {
-    const Settings& s = Prefs();
-    std::string bar;
-    for (int i = 0; i < 10; ++i) bar += i < s.volume ? "I" : ".";
-    DrawRow(g, "VOLUME  " + bar, 190.f, cursor_ == kVolume, frame_);
-    DrawRow(g, std::string("SCREEN SHAKE  ") + ShakeName(s.shake), 240.f, cursor_ == kShake, frame_);
-    DrawRow(g, std::string("JUMP  ") + JumpName(s.jump), 290.f, cursor_ == kJump, frame_);
-    DrawRow(g, "BACK", 360.f, cursor_ == kBack, frame_);
-    if (cursor_ == kJump) g.Text(JumpHint(s.jump), W * 0.5f, 450, 2, Hex(0xe6d6ff), Align::Center);
+    DrawSettingsMenu(g, cursor_, frame_, 190.f, 450.f);
     g.Text("LEFT / RIGHT - CHANGE    ESC - BACK", W * 0.5f, 508, 2, Hex(0x9a82c0), Align::Center);
   }
 }

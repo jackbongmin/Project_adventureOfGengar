@@ -34,19 +34,6 @@ class PlayingPhase : public PlayPhase {
   }
 };
 
-class PausedPhase : public PlayPhase {
- public:
-  const char* Name() const override { return "Paused"; }
-  void Update(PlayMode& m) override {
-    if (m.GetGame().In().Pressed(Action::Pause)) m.Phase().Change(MakePlayingPhase());
-  }
-  void Render(PlayMode&, Graphics& g) override {
-    g.FillRect(0, 0, kW, kH, Rgb(10, 0, 25, 153));
-    g.Text("PAUSE", kW * 0.5f, 230, 8, Hex(0xffffff), Align::Center);
-    g.Text("PRESS ESC TO RESUME", kW * 0.5f, 310, 2, Hex(0xc9b0ee), Align::Center);
-  }
-};
-
 // 사망 연출 후 목숨을 차감하고 재도전/게임오버로 이어진다.
 class PlayerDeadPhase : public PlayPhase {
  public:
@@ -113,7 +100,6 @@ class HatGetPhase : public PlayPhase {
 }  // namespace
 
 std::unique_ptr<PlayPhase> MakePlayingPhase() { return std::make_unique<PlayingPhase>(); }
-std::unique_ptr<PlayPhase> MakePausedPhase() { return std::make_unique<PausedPhase>(); }
 std::unique_ptr<PlayPhase> MakePlayerDeadPhase() { return std::make_unique<PlayerDeadPhase>(); }
 std::unique_ptr<PlayPhase> MakeStageClearPhase() { return std::make_unique<StageClearPhase>(); }
 std::unique_ptr<PlayPhase> MakeHatGetPhase() { return std::make_unique<HatGetPhase>(); }
