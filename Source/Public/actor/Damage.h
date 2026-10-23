@@ -13,7 +13,7 @@ struct DamageInfo {
   const char* source = "";  // 피해 출처 이름 (디버그 로그용)
   bool fromPlayer = false;  // 플레이어 공격 (처형자/저주 배율 적용)
   bool crit = false;        // 치명타 (노란 숫자)
-  bool curse = false;       // 맞은 대상에 저주 표식 (3초 동안 받는 피해 +25%)
+  bool curse = false;       // 맞은 대상에 저주 표식 (2초 동안 받는 피해 2배, 같은 대상은 15초 쿨타임)
   float knockback = 0.f;    // 넉백 속도 (일반 적만)
 };
 

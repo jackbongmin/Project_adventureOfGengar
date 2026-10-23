@@ -29,6 +29,7 @@ void Enemy::Update(World& w) {
   if (flash_ > 0) --flash_;
   if (stompGrace_ > 0) --stompGrace_;
   if (curse_ > 0) --curse_;
+  if (curseCooldown_ > 0) --curseCooldown_;
   intent_ = Intent{};
   if (controller_) controller_->Think(*this, w, intent_);
   ApplyIntent(w);
@@ -94,7 +95,7 @@ void Enemy::TakeDamage(World& w, const DamageInfo& info) {
   if (!info.ultimate) w.AddGauge(hp_ - dmg <= 0 ? 15.f : 4.f);
   hp_ -= dmg;
   flash_ = 6;
-  if (info.curse) curse_ = 180;
+  if (info.curse && curseCooldown_ == 0) { curse_ = stats::kCurseFrames; curseCooldown_ = stats::kCurseCooldown; }
   if (info.knockback > 0.f) Push(static_cast<float>(info.dir) * info.knockback);
   const Vec2 c = Bounds().Center();
   if (info.crit) w.Fx().Pop({c.x, pos.y - 6.f}, "-" + std::to_string(dmg) + "!", Hex(0xffe27a));

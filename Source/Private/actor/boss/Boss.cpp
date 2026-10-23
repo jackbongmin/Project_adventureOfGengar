@@ -83,6 +83,7 @@ void Boss::Update(World& w) {
   ++tick_;
   if (flash_ > 0) --flash_;
   if (curse_ > 0) --curse_;
+  if (curseCooldown_ > 0) --curseCooldown_;
   if (attackNameTimer_ > 0) --attackNameTimer_;
 
   const Vec2 pc = PlayerCenter();
@@ -122,7 +123,7 @@ void Boss::TakeDamage(World& w, const DamageInfo& info) {
   if (info.fromPlayer) dmg *= stats::TargetMultiplier(w.Sess(), hp_ / maxHp_, curse_ > 0);
   hp_ -= dmg;
   flash_ = 5;
-  if (info.curse) curse_ = 180;
+  if (info.curse && curseCooldown_ == 0) { curse_ = stats::kCurseFrames; curseCooldown_ = stats::kCurseCooldown; }
   const std::string text = "-" + std::to_string(static_cast<int>(std::lround(dmg))) + (info.crit ? "!" : "");
   w.Fx().Pop({pos.x + RandRange(-30.f, 30.f), pos.y - 60.f}, text, info.crit ? Hex(0xffe27a) : Hex(0xffd0ff));
   w.Snd().Play(Sfx::BossHit);

@@ -15,7 +15,7 @@ struct ShotSpec {
   bool homing = false;
   bool burst = false;      // 맞힌 자리 주변에 50% 폭발
   bool split = false;      // 맞힌 자리에서 작은 공 3개로 분열
-  bool curse = false;      // 맞은 적이 3초 동안 받는 피해 +25%
+  bool curse = false;      // 맞은 적이 2초 동안 받는 피해 2배 (같은 적은 15초 쿨타임)
   bool fragment = false;   // 분열 조각: 다시 폭발/분열하지 않는다 (연쇄 방지)
   bool charged = false;    // 차지샷 (크고 밝게 그린다)
   bool ultimate = false;   // 필살기 탄: 게이지 충전과 치명타 없음

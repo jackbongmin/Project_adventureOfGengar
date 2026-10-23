@@ -63,11 +63,17 @@ inline int Rerolls(const Session& s) { return s.Card(CardId::Reroll); }
 // 보스 체력: 플레이어의 성장과 상관없이 고정이다.
 inline int BossMaxHp(const Session&) { return cfg::kBossHp; }
 
-// 플레이어 공격이 대상에게 들어갈 때의 배율: 처형자(빈사 +50%) x 저주(+25%)
+// 저주탄: 맞은 대상이 2초 동안 받는 피해 2배. 같은 대상은 15초 동안 다시 저주에 걸리지 않는다
+// (보스처럼 계속 맞는 대상에게 2배가 끝없이 이어지지 않도록).
+// 처음에는 +25% 였는데, 기본 피해가 1이라 반올림하면 1 그대로여서 효과가 없었다.
+inline constexpr int kCurseFrames = 120;
+inline constexpr int kCurseCooldown = 900;
+
+// 플레이어 공격이 대상에게 들어갈 때의 배율: 처형자(빈사 +50%) x 저주(2배)
 inline float TargetMultiplier(const Session& s, float hpRatio, bool cursed) {
   float m = 1.f;
   if (s.Has(CardId::Execute) && hpRatio <= 0.3f) m *= 1.5f;
-  if (cursed) m *= 1.25f;
+  if (cursed) m *= 2.f;
   return m;
 }
 

@@ -26,6 +26,7 @@ struct CardDef {
   CardCategory category;
   CardKind kind;
   int maxStack;       // 최대 단계 (99 = 제한 없음)
+  int weight = 1;     // 같은 등급 안에서 뽑히는 비중 (자주 나와야 하는 카드는 크게)
 };
 
 const CardDef& GetCard(CardId id);

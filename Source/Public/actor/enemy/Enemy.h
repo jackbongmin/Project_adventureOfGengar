@@ -34,6 +34,7 @@ class Enemy : public Character {
 
   int stompGrace_ = 0;
   int curse_ = 0;          // 저주 표식 남은 프레임
+  int curseCooldown_ = 0;  // 다시 저주에 걸릴 수 있을 때까지 남은 프레임
   float knockVel_ = 0.f;  // 밟힌 직후 몇 프레임은 플레이어와 겹쳐도 몸통 피해를 주지 않는다 (튕겨 나가는 중)
 };
 

@@ -71,6 +71,7 @@ class Boss : public Actor, public IDamageable {
   int tick_ = 0;
   int flash_ = 0;
   int curse_ = 0;  // 저주 표식 남은 프레임
+  int curseCooldown_ = 0;  // 다시 저주에 걸릴 수 있을 때까지 남은 프레임
   Vec2 look_;
   const char* attackName_ = "";
   int attackNameTimer_ = 0;

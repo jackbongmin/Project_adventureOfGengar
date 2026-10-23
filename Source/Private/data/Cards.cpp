@@ -19,7 +19,8 @@ using K = CardKind;
 // 기획서 카드 목록과 같은 순서 (CardId 순서)
 const std::vector<CardDef>& Table() {
   static const std::vector<CardDef> table = {
-      {CardId::AttackUp, "ATTACK UP", "DAMAGE +1", G::Common, C::Attack, K::Stat, 5},
+      // 공격력: 등급마다 카드 수가 많아 한 장이 잘 안 나와서, 희귀로 올리고 비중 4 (한 칸에 나올 확률 약 2.8% -> 6.7%)
+      {CardId::AttackUp, "ATTACK UP", "DAMAGE +1", G::Rare, C::Attack, K::Stat, 5, 4},
       {CardId::FireRate, "FIRE RATE", "SHOOT FASTER", G::Common, C::Attack, K::Stat, 4},
       {CardId::RangeUp, "RANGE UP", "SHOTS GO FARTHER", G::Common, C::Attack, K::Stat, 3},
       {CardId::ShotSpeed, "SHOT SPEED", "SHOTS FLY FASTER", G::Common, C::Attack, K::Stat, 2},
@@ -31,7 +32,7 @@ const std::vector<CardDef>& Table() {
       {CardId::MultiShot, "MULTI SHOT", "+1 SHOT", G::Epic, C::Attack, K::SpecialStack, 2},
       {CardId::Bounce, "BOUNCE", "SHOTS BOUNCE OFF WALLS", G::Epic, C::Attack, K::SpecialStack, 2},
       {CardId::BurstShot, "BURST SHOT", "SHOTS EXPLODE ON HIT", G::Epic, C::Attack, K::Special, 1},
-      {CardId::Curse, "CURSE", "HIT FOES TAKE MORE DAMAGE", G::Epic, C::Attack, K::Special, 1},
+      {CardId::Curse, "CURSE", "HIT FOES TAKE 2X DAMAGE FOR 2S", G::Epic, C::Attack, K::Special, 1},
       {CardId::Homing, "HOMING", "SHOTS CHASE FOES. DAMAGE -1", G::Legend, C::Attack, K::Special, 1},
       {CardId::Split, "SPLIT", "SHOTS SPLIT IN 3 ON HIT", G::Legend, C::Attack, K::Special, 1},
       {CardId::ChargeShot, "CHARGE SHOT", "HOLD Z: BIG SHOT", G::Legend, C::Attack, K::Special, 1},
@@ -115,6 +116,18 @@ Grade RollGrade(const Session& s, int stage) {
   return Grade::Common;
 }
 
+// 비중(weight)대로 하나 고른다
+CardId PickWeighted(const std::vector<CardId>& c) {
+  int total = 0;
+  for (CardId id : c) total += Table()[static_cast<size_t>(id)].weight;
+  int r = RandInt(0, total - 1);
+  for (CardId id : c) {
+    r -= Table()[static_cast<size_t>(id)].weight;
+    if (r < 0) return id;
+  }
+  return c.back();
+}
+
 }  // namespace
 
 const std::vector<CardDef>& AllCards() { return Table(); }
@@ -188,7 +201,7 @@ std::vector<CardId> DrawOffer(const Session& s, const OfferContext& ctx, int cou
     for (int k = 0; k < 4; ++k) {
       const std::vector<CardId> c = candidates(static_cast<Grade>(order[k]));
       if (c.empty()) continue;
-      const CardId pick = c[static_cast<size_t>(RandInt(0, static_cast<int>(c.size()) - 1))];
+      const CardId pick = PickWeighted(c);
       out.push_back(pick);
       ++perCat[static_cast<int>(GetCard(pick).category)];
       break;
@@ -203,7 +216,7 @@ std::vector<CardId> DrawOffer(const Session& s, const OfferContext& ctx, int cou
     for (int g = 1; g < 4; ++g) {
       std::vector<CardId> c = candidates(static_cast<Grade>(g));
       if (c.empty()) continue;
-      out.insert(out.begin(), c[static_cast<size_t>(RandInt(0, static_cast<int>(c.size()) - 1))]);
+      out.insert(out.begin(), PickWeighted(c));
       break;
     }
     if (static_cast<int>(out.size()) < count) out.insert(out.begin(), old);  // 희귀 이상이 하나도 안 남은 경우
