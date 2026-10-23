@@ -44,6 +44,7 @@ class Boss : public Actor, public IDamageable {
   int Hp() const { return static_cast<int>(hp_ + 0.999f); }
   int MaxHp() const { return static_cast<int>(maxHp_); }
   void SetHealthRatio(float ratio) { hp_ = maxHp_ * Clamp(ratio, 0.01f, 1.f); }  // 디버그/튜닝용
+  bool Cursed() const { return curse_ > 0; }
   const char* AttackName() const { return attackName_; }
   int AttackNameTimer() const { return attackNameTimer_; }
 
@@ -69,6 +70,7 @@ class Boss : public Actor, public IDamageable {
   int phase_ = 0;
   int tick_ = 0;
   int flash_ = 0;
+  int curse_ = 0;  // 저주 표식 남은 프레임
   Vec2 look_;
   const char* attackName_ = "";
   int attackNameTimer_ = 0;

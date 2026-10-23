@@ -7,7 +7,7 @@
 
 namespace gengar::version {
 
-inline constexpr const char* kNumber = "0.1.0";
-inline constexpr const char* kLabel = "v0.1.0 BETA";
+inline constexpr const char* kNumber = "0.2.0";
+inline constexpr const char* kLabel = "v0.2.0 BETA";
 
 }  // namespace gengar::version

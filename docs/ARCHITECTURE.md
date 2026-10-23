@@ -48,12 +48,15 @@ main -> Game ──(현재 하나)──> GameMode  (Title / Play / Shop / GameO
 | BotController | Player(검증용) | 자동 플레이 봇. 사람 대신 Intent를 만든다 |
 
 ### Data (data/) — 수치와 표
-- `PlayerStats.h`: 업그레이드 레벨 -> 능력치 수식 (공격력, 사거리, 연사, 점프 등)
-- `Upgrades.cpp`: 상점 항목 표
+- `Cards.cpp`: 로그라이크 카드 표(49종: 이름, 설명, 등급, 분류, 종류, 최대 단계), 등급 확률, 카드 3장 뽑기(`DrawOffer`), 카드 얻기(`ApplyCard`), 레벨업 경험치. 기획서는 `docs/design/roguelike_cards.xlsx`.
+  - 종류: 능력치(최대 단계까지 다시 나옴) / 특수(한 번만) / 특수(중첩: 투사체 수, 대시 칸처럼 개수로 쌓임) / 소모(회복)
+  - 서로 다른 특수 능력은 모두 함께 적용된다. 공 능력(관통, 튕김, 유도, 폭발, 분열, 저주, 치명타)은 `ShotSpec` 하나에 담겨 섀도우볼이 한꺼번에 처리한다.
+- `PlayerStats.h`: 카드 단계 -> 능력치 수식 (공격력, 사거리, 연사, 점프, 대시 칸 등)
 - `BossPatterns.cpp`: 보스 단계별 패턴 목록 (보스가 이 중에서 무작위로 고르며, 같은 패턴이 연속으로 나오지는 않는다)
 - `BossTuning.cpp`: 보스 단계별 난이도 표. 이동 속도, 공격 사이 쉬는 시간, 패턴별 탄 수/속도/예고 시간을 "1단계, 2단계, 3단계" 순으로 한 곳에서 조정한다.
-- 보스 체력: 고정 320(`cfg::kBossHp`). 플레이어의 성장(업그레이드)에 따라 늘어나지 않는다(`stats::BossMaxHp`).
-- 상점의 "사면 어떻게 바뀌는지" 미리보기는 `Upgrades.cpp`의 `PreviewUpgrade`가 `PlayerStats` 수식으로 계산한다.
+- 보스 체력: 고정 320(`cfg::kBossHp`). 플레이어의 성장(카드)에 따라 늘어나지 않는다(`stats::BossMaxHp`).
+- 카드 고르기 흐름: 적 처치 -> `World::AddXp` -> 레벨업마다 `pendingPicks_` +1 (보스전은 `Boss`가 체력 단계 전환 때 `QueueCardPick`) -> `PlayingPhase`가 `CardPickPhase`로 전환 -> `ui/CardPicker`가 카드 화면을 그리고 고른 카드를 `ApplyCard`. 상점은 같은 `CardPicker`를 50코인 뽑기에 쓴다.
+- 카드와 레벨(`Session::prog`)은 코인처럼 스테이지 시작 시점 스냅샷이 있어서, 사망 후 재도전하면 되돌아간다.
 - `core/Config.h`: 화면/타일/중력/보스 체력 등 전역 상수
 - `world/StageBuilder.cpp`: 스테이지 3개의 지형, 적, 아이템 배치
 
@@ -71,8 +74,8 @@ main -> Game ──(현재 하나)──> GameMode  (Title / Play / Shop / GameO
 **새 스테이지 추가**
 `StageBuilder.cpp`에 `BuildXxx` 함수를 만들고 `BuildStage`에 분기를 추가한다. `cfg::kStageCount`/`kBossStage`도 맞춘다.
 
-**새 업그레이드 추가**
-`core/Session.h`의 `UpgradeId`에 추가 -> `data/Upgrades.cpp` 표에 한 줄 -> `data/PlayerStats.h`에 수식 추가 -> 해당 수치를 쓰는 곳에서 사용.
+**새 카드 추가**
+`data/CardId.h`에 ID 추가 -> `data/Cards.cpp` 표에 한 줄(같은 순서) -> `art/CardIcons.cpp`의 `CardIconRows`에 아이콘 연결 -> 능력치면 `data/PlayerStats.h`에 수식, 특수 능력이면 쓰는 곳(`Player`, `ShadowBall` 등)에서 `Session::Has(CardId::...)`로 확인. 기획서 엑셀에도 한 줄 추가.
 
 **키 변경**
 `platform/Input.cpp`의 바인딩 표.

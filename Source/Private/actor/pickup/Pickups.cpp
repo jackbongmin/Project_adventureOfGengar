@@ -7,6 +7,7 @@
 #include "art/Art.h"
 #include "core/Config.h"
 #include "core/DebugOptions.h"
+#include "data/PlayerStats.h"
 #include "platform/Audio.h"
 #include "platform/Graphics.h"
 #include "world/World.h"
@@ -17,7 +18,12 @@ void Coin::Update(World& w) {
   Player& p = w.GetPlayer();
   if (!p.IsAlive()) return;
   const Vec2 pc = p.Bounds().Center();
-  if (std::hypot(pos.x - pc.x, pos.y - pc.y) < 22.f) {
+  const float d = std::hypot(pos.x - pc.x, pos.y - pc.y);
+  if (d >= 22.f && d < stats::MagnetRadius(w.Sess())) {  // 코인 자석: 범위 안의 코인이 날아온다
+    pos += (pc - pos) * (7.f / d);
+    return;
+  }
+  if (d < 22.f) {
     w.AddCoins(1);
     w.AddScore(10);
     w.Snd().Play(Sfx::Coin);

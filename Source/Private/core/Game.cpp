@@ -15,6 +15,7 @@
 #include "core/Config.h"
 #include "core/DebugOptions.h"
 #include "core/Version.h"
+#include "data/Cards.h"
 #include "mode/GameOverMode.h"
 #include "mode/IntroMode.h"
 #include "mode/PlayMode.h"
@@ -143,8 +144,24 @@ void Game::Run() {
 void Game::GoTitle() { ChangeMode(std::make_unique<TitleMode>()); }
 void Game::GoIntro() { ChangeMode(std::make_unique<IntroMode>()); }
 
+// 디버그 옵션 cards=... 의 카드를 지급한다
+void Game::GrantDebugCards() {
+  const std::string& list = Debug().cards;
+  size_t start = 0;
+  while (start < list.size()) {
+    const size_t comma = list.find(',', start);
+    const std::string name = list.substr(start, comma == std::string::npos ? std::string::npos : comma - start);
+    const CardId id = FindCardByName(name.c_str());
+    if (id != CardId::Count) ApplyCard(session_, id, nullptr);
+    else DebugLog("[debug] unknown card '%s'", name.c_str());
+    if (comma == std::string::npos) break;
+    start = comma + 1;
+  }
+}
+
 void Game::StartNewRun() {
   session_.Reset();
+  GrantDebugCards();
   session_.stage = Clamp(Debug().startStage, 0, cfg::kStageCount - 1);
   session_.coins = Debug().startCoins;
   if (Debug().startInShop) { GoShop(); return; }
@@ -155,10 +172,11 @@ void Game::StartNewRun() {
 void Game::StartAtStage(int stage) {
   session_.Reset();
   session_.stage = Clamp(stage, 0, cfg::kStageCount - 1);
-  auto give = [&](UpgradeId id, int lv) { session_.Level(id) = lv; };
   if (session_.stage >= 1) {
-    give(UpgradeId::Power, 1); give(UpgradeId::Rate, 1); give(UpgradeId::MaxHp, 1); give(UpgradeId::Speed, 1);
+    for (CardId id : {CardId::AttackUp, CardId::FireRate, CardId::MaxHeart, CardId::MoveSpeed}) ApplyCard(session_, id, nullptr);
+    session_.prog.level = 5;  // 스테이지 1을 마쳤을 때 쯤의 레벨
   }
+  GrantDebugCards();
   StartStage(false);
 }
 
@@ -167,6 +185,7 @@ void Game::StartBossFromShop() {
   session_.Reset();
   session_.stage = cfg::kBossStage - 1;  // 상점을 나가면 stage + 1 = 보스 스테이지
   session_.coins = 150;
+  GrantDebugCards();
   GoShop();
 }
 

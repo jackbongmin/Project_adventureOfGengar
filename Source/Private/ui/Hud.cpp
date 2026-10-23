@@ -8,6 +8,8 @@
 #include "art/Art.h"
 #include "core/Config.h"
 #include "core/Session.h"
+#include "data/Cards.h"
+#include "data/PlayerStats.h"
 #include "platform/Graphics.h"
 #include "ui/Menu.h"
 #include "world/World.h"
@@ -21,6 +23,31 @@ void DrawHud(Graphics& g, const World& w, const Session& s) {
   g.FillRect(0, 0, kW, 44, Rgb(10, 0, 25, 140));
   for (int i = 0; i < p.MaxHp(); ++i) g.DrawSprite(i < p.Hp() ? art::A().heartFull : art::A().heartEmpty, 12.f + static_cast<float>(i) * 28.f, 10.f, 3);
   g.Text("LIFE x" + std::to_string(s.lives), 26.f + static_cast<float>(p.MaxHp()) * 28.f + 10.f, 15, 2, Hex(0xd9c2ff));
+
+  // 경험치 바: HUD 띠 바로 아래 전체 폭. 레벨업 순간 하얗게 번쩍인다. 보스전은 레벨만 보여 준다.
+  {
+    const bool bossStage = w.StageIndex() == cfg::kBossStage;
+    const float ratio = bossStage ? 1.f : static_cast<float>(s.prog.xp) / static_cast<float>(XpToNext(s.prog.level));
+    g.FillRect(0, 44, kW, 6, Rgb(0, 0, 0, 170));
+    const Color fill = w.LevelUpFlash() > 0 && (w.LevelUpFlash() / 4) % 2 ? Hex(0xffffff) : bossStage ? Hex(0x3a6a8a) : Hex(0x7ae0ff);
+    g.FillRect(0, 46, std::floor(kW * ratio / 2.f) * 2.f, 2, fill);
+    g.Text("LV " + std::to_string(s.prog.level), 12.f, 54.f, 2, Hex(0x7ae0ff));
+  }
+
+  // 대시 칸: 찬 칸은 하늘색, 차는 중인 칸은 아래부터 채워진다
+  {
+    const int slots = stats::DashCharges(s), ready = p.DashReady();
+    const float dx = 76.f, dy = 54.f;
+    for (int i = 0; i < slots; ++i) {
+      const float x = dx + static_cast<float>(i) * 16.f;
+      g.FillRect(x, dy, 12, 14, Hex(0x0c0418));
+      if (i < ready) g.FillRect(x + 2, dy + 2, 8, 10, Hex(0x7ae0ff));
+      else if (i == ready) {
+        const float k = p.DashRefill(w);
+        g.FillRect(x + 2, dy + 12 - std::floor(10.f * k / 2.f) * 2.f, 8, std::floor(10.f * k / 2.f) * 2.f, Hex(0x3a6a8a));
+      }
+    }
+  }
 
   const float coinW = 20.f + static_cast<float>(g.TextWidth(std::to_string(s.coins), 2));  // 코인 아이콘(16) + 틈(4) + 숫자
   DrawCoinAmount(g, s.coins, 480.f - coinW * 0.5f, 15.f, 2, Hex(0xffe27a));
@@ -57,7 +84,7 @@ void DrawHud(Graphics& g, const World& w, const Session& s) {
   if (w.Combo() >= 2) {
     const int combo = w.Combo();
     const float x = kW - 20.f, y = 56.f;
-    const float left = static_cast<float>(w.ComboTimer()) / static_cast<float>(World::kComboFrames);
+    const float left = static_cast<float>(w.ComboTimer()) / static_cast<float>(w.ComboFrames());
     const Color c = combo >= 10 ? Hsl(std::fmod(t * 6.f, 360.f), 1.f, 0.7f) : combo >= 5 ? Hex(0xffb347) : Hex(0xffe27a);
     g.SetGlobalAlpha(std::min(1.f, left * 4.f));
     g.Text(std::to_string(combo) + " COMBO", x, y, w.ComboPop() > 6 ? 4 : 3, c, Align::Right);

@@ -15,7 +15,7 @@ void BotController::Think(Character& self, World& w, Intent& out) {
   const float T = static_cast<float>(cfg::kTile);
   const Rect b = self.Bounds();
 
-  out.shoot = true;
+  out.shoot = !w.Sess().Has(CardId::ChargeShot) || w.Frame() % 75 != 0;  // 차지샷: 75프레임마다 떼서 발사
   out.jumpHeld = true;
   out.ultimate = w.Sess().gauge >= 100.f;
 

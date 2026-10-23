@@ -46,6 +46,7 @@ class Game {
 
  private:
   void ChangeMode(std::unique_ptr<GameMode> mode);  // 다음 프레임 시작 시 적용
+  void GrantDebugCards();
   double SmoothFrameTime(double dt);  // 프레임 간격을 평균 내고 vsync 간격에 맞춘다 (끊김 방지)
   void RecordPerf(double dt, int steps, uint64_t renderStart, uint64_t presentStart);
 

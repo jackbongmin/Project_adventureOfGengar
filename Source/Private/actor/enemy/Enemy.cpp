@@ -9,6 +9,9 @@
 #include "core/Config.h"
 #include "core/DebugOptions.h"
 #include "core/Random.h"
+#include "core/Session.h"
+#include "data/PlayerStats.h"
+#include "platform/Graphics.h"
 #include "platform/Audio.h"
 #include "world/World.h"
 
@@ -25,9 +28,14 @@ Enemy::Enemy(Vec2 p, Vec2 s, int hp) : Character(ActorKind::Enemy, p, s, hp) {}
 void Enemy::Update(World& w) {
   if (flash_ > 0) --flash_;
   if (stompGrace_ > 0) --stompGrace_;
+  if (curse_ > 0) --curse_;
   intent_ = Intent{};
   if (controller_) controller_->Think(*this, w, intent_);
   ApplyIntent(w);
+  if (std::fabs(knockVel_) > 0.05f) {
+    vel.x += knockVel_;
+    knockVel_ *= 0.8f;
+  }
   StepPhysics(w);
   if (intent_.shoot) OnShoot(w, intent_.aim);
   if (pos.y > static_cast<float>(cfg::kScreenH) + 100.f) { Kill(); return; }
@@ -66,18 +74,31 @@ void Enemy::ContactPlayer(World& w) {
     TakeDamage(w, DamageInfo{2.f, 1, true, false});
   } else {
     DebugLog("[enemy] body contact (depth %.1f, player vy %.1f)", p.Bounds().Bottom() - pos.y, p.vel.y);
-    p.TakeDamage(w, DamageInfo{1.f, Sign(p.pos.x - pos.x) != 0 ? Sign(p.pos.x - pos.x) : 1, false, false, "enemy-contact"});
+    const bool couldHurt = !p.Invulnerable();
+    const int dir = Sign(p.pos.x - pos.x) != 0 ? Sign(p.pos.x - pos.x) : 1;
+    p.TakeDamage(w, DamageInfo{1.f, dir, false, false, "enemy-contact"});
+    if (couldHurt && w.Sess().Has(CardId::Thorns)) {  // 가시 반격: 부딪힌 적에게 3
+      DamageInfo thorns{3.f, -dir};
+      thorns.fromPlayer = true;
+      thorns.knockback = 6.f;
+      TakeDamage(w, thorns);
+    }
   }
 }
 
 void Enemy::TakeDamage(World& w, const DamageInfo& info) {
   if (!IsAlive()) return;
-  const int dmg = static_cast<int>(std::lround(info.amount));
-  w.AddGauge(hp_ - dmg <= 0 ? 15.f : 4.f);
+  float amount = info.amount;
+  if (info.fromPlayer) amount *= stats::TargetMultiplier(w.Sess(), static_cast<float>(hp_) / static_cast<float>(maxHp_), curse_ > 0);
+  const int dmg = std::max(1, static_cast<int>(std::lround(amount)));
+  if (!info.ultimate) w.AddGauge(hp_ - dmg <= 0 ? 15.f : 4.f);
   hp_ -= dmg;
   flash_ = 6;
+  if (info.curse) curse_ = 180;
+  if (info.knockback > 0.f) Push(static_cast<float>(info.dir) * info.knockback);
   const Vec2 c = Bounds().Center();
-  w.Fx().Pop({c.x, pos.y}, "-" + std::to_string(dmg));
+  if (info.crit) w.Fx().Pop({c.x, pos.y - 6.f}, "-" + std::to_string(dmg) + "!", Hex(0xffe27a));
+  else w.Fx().Pop({c.x, pos.y}, "-" + std::to_string(dmg));
   w.Snd().Play(Sfx::EnemyHit);
   if (hp_ > 0) { w.HitStop(2); return; }
 
@@ -86,6 +107,8 @@ void Enemy::TakeDamage(World& w, const DamageInfo& info) {
   const int mult = w.RegisterKill(c);
   w.AddScore(100 * mult);
   w.AddCoins(3);
+  w.AddXp(XpValue());
+  w.OnEnemyKilled();
   w.Fx().Burst(c, 18, DeathColor(), 4.f);
   w.Fx().Pop({c.x, pos.y - 12.f}, "+3", Hex(0xffe27a));
   if (Chance(0.12f)) w.Spawn<Heart>(c);

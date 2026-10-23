@@ -38,7 +38,10 @@ void Effects::Dust(Vec2 p, int count, float pushX) {
 }
 
 void Effects::Pop(Vec2 p, const std::string& text, Color color) { texts_.push_back({p, text, color, 45}); }
-void Effects::AddRing(Vec2 center) { rings_.push_back({center, 10.f, 36}); }
+void Effects::AddRing(Vec2 center, float reach) {
+  const int life = reach >= 400.f ? 36 : 14;
+  rings_.push_back({center, 10.f, (reach - 10.f) / static_cast<float>(life), life, life});
+}
 void Effects::AddChunk(Vec2 topLeft) { chunks_.push_back({topLeft, 0.f, 0.f, RandRange(-0.1f, 0.1f)}); }
 
 void Effects::Update() {
@@ -54,7 +57,7 @@ void Effects::Update() {
   for (FloatText& t : texts_) { t.p.y -= 0.6f; --t.life; }
   texts_.erase(std::remove_if(texts_.begin(), texts_.end(), [](const FloatText& t) { return t.life <= 0; }), texts_.end());
 
-  for (Ring& r : rings_) { r.r += 22.f; --r.life; }
+  for (Ring& r : rings_) { r.r += r.grow; --r.life; }
   rings_.erase(std::remove_if(rings_.begin(), rings_.end(), [](const Ring& r) { return r.life <= 0; }), rings_.end());
 
   for (Chunk& c : chunks_) { c.vy += 0.5f; c.p.y += c.vy; c.rot += c.vr; }
@@ -70,8 +73,8 @@ void Effects::Update() {
 void Effects::Render(Graphics& gfx) const {
   for (const Chunk& c : chunks_) g_chunkDraw(gfx, c.p);
   for (const Ring& r : rings_) {
-    const float a = static_cast<float>(r.life) / 36.f;
-    gfx.PixelRing(r.c.x, r.c.y, r.r, 8.f, Rgb(210, 150, 255, static_cast<int>(a * 255)), 4.f);
+    const float a = static_cast<float>(r.life) / static_cast<float>(r.maxLife);
+    gfx.PixelRing(r.c.x, r.c.y, r.r, r.maxLife < 36 ? 4.f : 8.f, Rgb(210, 150, 255, static_cast<int>(a * 255)), 4.f);
   }
   for (const Particle& p : particles_) {
     const float a = std::max(0.f, p.life / p.maxLife);

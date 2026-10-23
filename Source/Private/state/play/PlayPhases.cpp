@@ -2,15 +2,20 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "actor/Player.h"
 #include "core/Config.h"
 #include "core/DebugOptions.h"
 #include "core/Session.h"
 #include "core/Game.h"
+#include "data/Cards.h"
 #include "platform/Graphics.h"
 #include "platform/Audio.h"
 #include "platform/Input.h"
+#include "ui/CardPicker.h"
 
 namespace gengar {
 namespace {
@@ -31,7 +36,50 @@ class PlayingPhase : public PlayPhase {
     if (!world.GetPlayer().IsAlive()) m.Phase().Change(MakePlayerDeadPhase());
     else if (world.HatCollected()) m.Phase().Change(MakeHatGetPhase());
     else if (world.StageCleared()) m.Phase().Change(MakeStageClearPhase());
+    else if (world.PendingPicks() > 0) m.Phase().Change(MakeCardPickPhase());
   }
+};
+
+// 레벨업(또는 보스 체력 단계 전환): 게임을 멈추고 카드를 고른다. 여러 레벨이 한꺼번에 오르면 연달아 띄운다.
+class CardPickPhase : public PlayPhase {
+ public:
+  const char* Name() const override { return "CardPick"; }
+  void Enter(PlayMode& m) override { Deal(m); }
+  void Update(PlayMode& m) override {
+    Game& game = m.GetGame();
+    World& world = m.GetWorld();
+    world.UpdateEffects();
+    switch (picker_.Update(game.In(), game.Snd(), Debug().bot)) {
+      case CardPicker::Result::None: return;
+      case CardPicker::Result::Reroll:
+        world.UseReroll();
+        Deal(m);
+        return;
+      case CardPicker::Result::Picked:
+        ApplyCard(game.Sess(), picker_.Choice(), &world.GetPlayer());
+        break;
+    }
+    world.ConsumePick();
+    if (world.PendingPicks() > 0) Deal(m);
+    else m.Phase().Change(MakePlayingPhase());
+  }
+  void Render(PlayMode& m, Graphics& g) override { picker_.Render(g, m.GetGame().Sess()); }
+
+ private:
+  void Deal(PlayMode& m) {
+    World& world = m.GetWorld();
+    const Session& s = m.GetGame().Sess();
+    const Player& p = world.GetPlayer();
+    OfferContext ctx;
+    ctx.stage = world.StageIndex();
+    ctx.hpFull = p.Hp() >= p.MaxHp();
+    std::vector<CardId> offer = DrawOffer(s, ctx, OfferSize(s));
+    if (offer.empty()) { world.ConsumePick(); m.Phase().Change(MakePlayingPhase()); return; }  // 얻을 카드가 하나도 남지 않음
+    const bool boss = world.StageIndex() == cfg::kBossStage;
+    picker_.Open(std::move(offer), boss ? "PHASE BONUS!" : "LEVEL UP!  LV " + std::to_string(s.prog.level), world.RerollsLeft());
+  }
+
+  CardPicker picker_;
 };
 
 // 사망 연출 후 목숨을 차감하고 재도전/게임오버로 이어진다.
@@ -101,6 +149,7 @@ class HatGetPhase : public PlayPhase {
 
 std::unique_ptr<PlayPhase> MakePlayingPhase() { return std::make_unique<PlayingPhase>(); }
 std::unique_ptr<PlayPhase> MakePlayerDeadPhase() { return std::make_unique<PlayerDeadPhase>(); }
+std::unique_ptr<PlayPhase> MakeCardPickPhase() { return std::make_unique<CardPickPhase>(); }
 std::unique_ptr<PlayPhase> MakeStageClearPhase() { return std::make_unique<StageClearPhase>(); }
 std::unique_ptr<PlayPhase> MakeHatGetPhase() { return std::make_unique<HatGetPhase>(); }
 

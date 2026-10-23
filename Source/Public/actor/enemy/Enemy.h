@@ -12,6 +12,9 @@ class Enemy : public Character {
 
   void Update(World& world) override;
   void TakeDamage(World& world, const DamageInfo& info) override;
+  void Push(float vx) { knockVel_ = vx; }  // 넉백/블랙홀이 밀거나 끄는 속도 (점점 줄어든다)
+  bool Cursed() const { return curse_ > 0; }
+  virtual int XpValue() const { return 2; }  // 처치 경험치 (기획서 '경험치' 시트)
 
  protected:
   // Intent를 속도로 변환 (기본: 보행형 - 좌우 이동 + 점프)
@@ -29,7 +32,9 @@ class Enemy : public Character {
  private:
   void ContactPlayer(World& world);
 
-  int stompGrace_ = 0;  // 밟힌 직후 몇 프레임은 플레이어와 겹쳐도 몸통 피해를 주지 않는다 (튕겨 나가는 중)
+  int stompGrace_ = 0;
+  int curse_ = 0;          // 저주 표식 남은 프레임
+  float knockVel_ = 0.f;  // 밟힌 직후 몇 프레임은 플레이어와 겹쳐도 몸통 피해를 주지 않는다 (튕겨 나가는 중)
 };
 
 }  // namespace gengar

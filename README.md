@@ -3,7 +3,9 @@
 C++17 + SDL2로 만든 2D 횡스크롤 액션 게임. 같은 소스로 **웹(WebAssembly)** 과 **Windows 네이티브** 두 가지로 빌드된다.
 
 - 보라색 유령으로 스테이지 3개를 돌파하고 최종 보스 VOIDMAW를 쓰러뜨린다.
-- 코인으로 상점에서 능력치를 강화하고, 적을 처치해 필살기 게이지를 채운다.
+- 로그라이크 성장: 적을 처치해 경험치를 모으고, 레벨업할 때마다 카드 3장 중 1장을 골라 능력치를 올리거나 새 능력을 얻는다. 카드는 일반/희귀/영웅/전설 4등급(테두리 색이 다르다), 49종.
+- 스테이지 사이 상점에서는 코인 50개로 카드 뽑기를 한 번 더 할 수 있다(희귀 이상 1장 보장). 보스전에서는 보스 체력 단계가 바뀔 때 카드를 준다.
+- 카드 기획서(등급 확률, 카드 목록, 중첩 규칙, 경험치/상점 수치): [docs/design/roguelike_cards.xlsx](docs/design/roguelike_cards.xlsx)
 
 ## 조작
 
@@ -12,10 +14,11 @@ C++17 + SDL2로 만든 2D 횡스크롤 액션 게임. 같은 소스로 **웹(Web
 | ← → | 이동 |
 | **C** (또는 Space, ↑) | 점프 |
 | **Z** | 섀도우볼 (누르고 있으면 연사) |
-| **X** (또는 왼쪽 Shift) | 대시 (짧게 돌진, 그동안 피해 무시. 공중에서는 착지 전까지 1번) |
+| **X** (또는 왼쪽 Shift) | 대시 (짧게 돌진. 대시 칸을 하나 쓰고 칸은 다시 찬다. 공중에서는 착지 전까지 1번. 무적은 '무적 대시' 카드로 얻는다) |
 | **A** | 필살기 (게이지 100일 때) |
 | Esc / P | 일시정지 |
 | Enter (또는 Z) | 선택 / 구매, 시네마틱 다음 장면 |
+| 카드 화면: ← → / Z / ↑ | 카드 고르기 / 확정 / 다시 뽑기('다시 뽑기' 카드가 있을 때) |
 | **C 꾹 누르기** | 오프닝/엔딩 시네마틱 건너뛰기 |
 
 키 배치는 [Source/Private/platform/Input.cpp](Source/Private/platform/Input.cpp)의 바인딩 표에서 바꾼다.
@@ -54,7 +57,7 @@ Source/
     controller/ 입력/AI -> Intent 변환 (Player, Patrol, Chase, Turret, Fly)
     state/      상태 머신 + 보스 패턴 상태(boss/) + 플레이 진행 단계(play/)
     mode/       화면 단위 흐름: Title, Play, Shop, GameOver, Victory
-    data/       업그레이드 표, 능력치 수식, 보스 패턴 순서표
+    data/       카드 표와 뽑기 규칙, 능력치 수식, 보스 패턴 순서표
     art/        도트 스프라이트 데이터, 팔레트, 에셋 ID
     ui/         HUD
 web/shell.html  웹 빌드용 페이지 틀
@@ -66,7 +69,7 @@ prototype-html/ 처음 만든 HTML 프로토타입 (참고용)
 docs/           설계 문서
 ```
 
-설계 설명과 "새 적/보스 패턴/스테이지/업그레이드 추가 방법"은 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 참고.
+설계 설명과 "새 적/보스 패턴/스테이지/카드 추가 방법"은 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 참고.
 개발 중 막혔던 문제와 해결 과정은 [docs/troubleshooting/troubleshooting.md](docs/troubleshooting/troubleshooting.md)에 정리했다.
 
 ## 빌드 (웹)
@@ -124,7 +127,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build_win.ps1            # vcpk
 
 - 형식은 `MAJOR.MINOR.PATCH`. 정식 출시 전에는 MAJOR가 0이다.
 - 기능(스테이지, 적, 메뉴 등)이 늘면 MINOR를 올리고 PATCH는 0으로, 버그 수정·밸런스 조정만 있으면 PATCH를 올린다.
-- 현재 `v0.1.0 BETA`. 첫 정식 출시 때 `1.0.0`.
+- 현재 `v0.2.0 BETA` (0.2.0: 로그라이크 카드 시스템). 첫 정식 출시 때 `1.0.0`.
 
 ## 검증용 디버그 옵션
 
@@ -132,13 +135,15 @@ powershell -ExecutionPolicy Bypass -File scripts\build_win.ps1            # vcpk
 
 | 옵션 | 설명 |
 |---|---|
-| `bot=1` | 자동 플레이 봇이 조종 (낭떠러지/벽 점프, 상점 자동 구매) |
+| `bot=1` | 자동 플레이 봇이 조종 (낭떠러지/벽 점프, 카드 자동 선택, 상점 자동 뽑기) |
 | `god=1` | 피격 무적 (낙사는 여전히 사망) |
 | `log=1` | 스테이지/상점/보스 패턴/피격 출처 등 이벤트를 콘솔에 출력 |
 | `speed=8` | 배속 (1~16) |
 | `perf=1` | 2초마다 fps, 프레임 간격, 렌더 시간, 프레임당 로직 스텝 수, 그리기 호출 수를 출력 (끊김 진단용. exe는 `Start-Process -RedirectStandardOutput`로 받는다) |
 | `stage=2` `coins=100` `hp=1` | 시작 스테이지(0~2) / 시작 코인 / 시작 체력 |
 | `shop=1` | 시작하자마자 상점 (타이틀에서 Enter) |
+| `cards=homing,split,attackup,attackup` | 시작할 때 카드 지급. 이름은 카드 게임 표기에서 공백을 뺀 것, 같은 이름을 여러 번 쓰면 여러 단계 |
+| `pick=N` | 스테이지를 시작하자마자 카드 고르기 N번 (카드 화면 검증용, 자동 시작) |
 | `bossphase=0~2` `bosshp=N` `immortal=1` | 보스전 검증: 시작 단계 / 체력 / 불사 |
 | `heartdemo=1` | 시작 지점에 하트 추가 |
 | `heightdemo=1` | 플레이어를 위 발판에 올리고 아래에 추적 중인 늑대를 배치 (추적 포기 검증, 타이틀에서 Enter) |

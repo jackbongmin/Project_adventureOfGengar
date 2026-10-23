@@ -99,11 +99,25 @@ class World {
   void AddGauge(float n);  // 필살기 게이지 (필살기 발동 중에는 충전되지 않음)
   void SetUltActive(bool on) { ultActive_ = on; }
 
+  // ---- 로그라이크: 경험치와 카드 ----
+  void AddXp(int n);              // 레벨이 오를 때마다 카드 고르기가 하나씩 쌓인다 (보스전에서는 무시)
+  void QueueCardPick() { ++pendingPicks_; }  // 보스 체력 단계 전환 보상
+  int PendingPicks() const { return pendingPicks_; }
+  void ConsumePick() { if (pendingPicks_ > 0) --pendingPicks_; }
+  int RerollsLeft() const { return rerollsLeft_; }
+  void UseReroll() { if (rerollsLeft_ > 0) --rerollsLeft_; }
+  void OnEnemyKilled();           // 영혼 흡수 카드: 12마리마다 하트 1
+  int LevelUpFlash() const { return levelUpFlash_; }  // HUD 의 경험치 바가 번쩍이는 연출
+
+  // 나이트메어 필살기: frames 동안 적/보스/적 탄환이 멈춘다. 끝날 때 화면 전체 피해.
+  void StartTimeStop(int frames) { timeStop_ = frames; }
+  bool TimeStopped() const { return timeStop_ > 0; }
+
   // ---- 타격감 ----
   // 히트스톱: frames 동안 월드 전체가 멈춘다 (화면 흔들림은 유지). 겹치면 긴 쪽을 따른다.
   void HitStop(int frames) { hitStop_ = std::max(hitStop_, frames); }
-  // 콤보: 적을 처치할 때마다 +1, kComboFrames 안에 다음 처치가 없거나 피격되면 끊긴다.
-  static constexpr int kComboFrames = 180;
+  // 콤보: 적을 처치할 때마다 +1, ComboFrames() 안에 다음 처치가 없거나 피격되면 끊긴다. (콤보 유지 카드로 늘어남)
+  int ComboFrames() const;
   int RegisterKill(Vec2 at);  // 콤보 +1 후 점수 배율(1 + 콤보/5)을 돌려준다. 5콤보마다 코인 보너스.
   void BreakCombo() { combo_ = 0; comboTimer_ = 0; }
   int Combo() const { return combo_; }
@@ -145,6 +159,14 @@ class World {
   bool hatCollected_ = false;
   std::string banner_;
   int bannerTimer_ = 0;
+  float xpFrac_ = 0.f;     // 경험치 증가 카드의 소수점 경험치
+  int pendingPicks_ = 0;   // 아직 고르지 않은 카드 화면 수
+  int rerollsLeft_ = 0;    // 이번 스테이지에 남은 다시 뽑기
+  int kills_ = 0;          // 영혼 흡수 카운트
+  int levelUpFlash_ = 0;
+  int timeStop_ = 0;
+
+  void EndTimeStop();
 };
 
 }  // namespace gengar

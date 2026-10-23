@@ -16,7 +16,7 @@ class Effects {
   void Trail(Vec2 p, Color color, float size, float life);
   void Dust(Vec2 feet, int count, float pushX = 0.f);  // 발밑 먼지 (점프/착지/달리기/급정거)
   void Pop(Vec2 p, const std::string& text, Color color = Color{});
-  void AddRing(Vec2 center);
+  void AddRing(Vec2 center, float reach = 800.f);  // reach = 퍼져 나가는 최대 반지름 (기본: 화면을 덮는 필살기 링)
   void AddChunk(Vec2 topLeft);  // 무너지는 발판 조각
   void Shake(float amount) { shake_ = std::max(shake_, amount * ShakeScale(Prefs())); }
   void Flash() { flash_ = 14; }
@@ -31,7 +31,7 @@ class Effects {
  private:
   struct Particle { Vec2 p, v; float life, maxLife, size; Color color; float gravity; };
   struct FloatText { Vec2 p; std::string text; Color color; int life; };
-  struct Ring { Vec2 c; float r; int life; };
+  struct Ring { Vec2 c; float r, grow; int life, maxLife; };
   struct Chunk { Vec2 p; float vy, rot, vr; };
 
   std::vector<Particle> particles_;

@@ -11,6 +11,7 @@
 #include "core/Config.h"
 #include "core/DebugOptions.h"
 #include "data/BossTuning.h"
+#include "data/PlayerStats.h"
 #include "core/Random.h"
 #include "platform/Audio.h"
 #include "platform/Graphics.h"
@@ -81,6 +82,7 @@ void Boss::Update(World& w) {
   world_ = &w;
   ++tick_;
   if (flash_ > 0) --flash_;
+  if (curse_ > 0) --curse_;
   if (attackNameTimer_ > 0) --attackNameTimer_;
 
   const Vec2 pc = PlayerCenter();
@@ -96,6 +98,7 @@ void Boss::Update(World& w) {
       w.HitStop(12);
       w.Snd().Play(Sfx::BossPhase);
       w.ShowBanner(ph == 1 ? "- RAGE -" : "- FURY -", 90);
+      w.QueueCardPick();  // 보스전에서는 레벨업 대신 체력 단계가 바뀔 때 카드 1장
     }
   }
 
@@ -114,11 +117,14 @@ void Boss::Update(World& w) {
 
 void Boss::TakeDamage(World& w, const DamageInfo& info) {
   if (invulnerable || dying || Debug().immortal) { w.Snd().Play(Sfx::BossHit); return; }
-  w.AddGauge(3.f);
-  const float dmg = info.amount * damageMultiplier;
+  if (!info.ultimate) w.AddGauge(3.f);
+  float dmg = info.amount * damageMultiplier;
+  if (info.fromPlayer) dmg *= stats::TargetMultiplier(w.Sess(), hp_ / maxHp_, curse_ > 0);
   hp_ -= dmg;
   flash_ = 5;
-  w.Fx().Pop({pos.x + RandRange(-30.f, 30.f), pos.y - 60.f}, "-" + std::to_string(static_cast<int>(std::lround(dmg))), Hex(0xffd0ff));
+  if (info.curse) curse_ = 180;
+  const std::string text = "-" + std::to_string(static_cast<int>(std::lround(dmg))) + (info.crit ? "!" : "");
+  w.Fx().Pop({pos.x + RandRange(-30.f, 30.f), pos.y - 60.f}, text, info.crit ? Hex(0xffe27a) : Hex(0xffd0ff));
   w.Snd().Play(Sfx::BossHit);
   if (hp_ > 0.f) return;
 

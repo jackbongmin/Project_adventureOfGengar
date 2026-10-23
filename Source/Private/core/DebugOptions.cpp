@@ -32,6 +32,8 @@ void Apply(const std::string& key, const std::string& value) {
   else if (key == "heightdemo") g_options.heightDemo = Truthy(value);
   else if (key == "stompdemo") g_options.stompDemo = value.empty() ? 1 : std::max(0, std::min(32, std::atoi(value.c_str())));
   else if (key == "hp") g_options.startHp = std::atoi(value.c_str());
+  else if (key == "cards") g_options.cards = value;
+  else if (key == "pick") g_options.startPicks = value.empty() ? 1 : std::atoi(value.c_str());
 }
 
 // "a=1&b=2" 또는 "--a=1" 한 토큰을 key/value로 나눈다.

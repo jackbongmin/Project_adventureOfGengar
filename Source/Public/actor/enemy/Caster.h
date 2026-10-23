@@ -8,6 +8,7 @@ class Caster : public Enemy {
  public:
   Caster(Vec2 pos, int stage);
   void Render(Graphics& gfx, const World& world) override;
+  int XpValue() const override { return 4; }
 
  protected:
   void OnShoot(World& world, Vec2 aim) override;

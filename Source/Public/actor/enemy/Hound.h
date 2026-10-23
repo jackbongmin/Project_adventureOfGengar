@@ -10,6 +10,7 @@ class Hound : public Enemy {
   Hound(Vec2 pos, int stage);
   void Render(Graphics& gfx, const World& world) override;
   void ForceAlert();  // 검증용: 즉시 추적 상태로 만든다
+  int XpValue() const override { return 4; }
 
  private:
   ChaseController* chase_ = nullptr;  // 소유는 Character 의 controller_
