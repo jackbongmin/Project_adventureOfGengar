@@ -66,7 +66,7 @@ void Audio::Mix(float* out, int n) {
       v.t += 1.f / rate_;
     }
   }
-  for (int i = 0; i < n; ++i) out[i] = Clamp(out[i], -1.f, 1.f);
+  for (int i = 0; i < n; ++i) out[i] = Clamp(out[i] * volume_, -1.f, 1.f);
 }
 
 void Audio::Tone(float f0, float f1, float dur, Wave wave, float volume) {

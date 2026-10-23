@@ -21,7 +21,7 @@ class Game {
   bool Init();
   void Run();
   void Frame();  // 메인 루프 1회 (웹 빌드의 콜백에서 호출)
-  void Quit() { running_ = false; }
+  void Quit() { running_ = false; }  // 네이티브 전용. 웹에서는 메뉴에 표시하지 않는다.
 
   Graphics& Gfx() { return gfx_; }
   Input& In() { return input_; }
@@ -33,7 +33,9 @@ class Game {
   void GoTitle();
   void GoIntro();                     // 오프닝 시네마틱 -> 새 게임
   void StartNewRun();                 // 새 게임 시작 (스테이지 1)
-  void StartStage(bool retry);        // 현재 session.stage 시작. retry면 스냅샷을 갱신하지 않는다.
+  void StartAtStage(int stage);       // 메인 메뉴에서 해당 스테이지로 바로 시작 (앞 스테이지를 건너뛴 만큼 기본 강화 지급)
+  void StartBossFromShop();           // 메인 메뉴의 BOSS BATTLE: 코인 150으로 상점 -> 보스전
+  void StartStage(bool retry);       // 현재 session.stage 시작. retry면 스냅샷을 갱신하지 않는다.
   void GoShop();                      // 스테이지 클리어 후 상점
   void LeaveShop();                   // 상점에서 다음 스테이지로
   void OnPlayerDefeated();            // 사망: 목숨 차감 후 재도전 또는 게임오버

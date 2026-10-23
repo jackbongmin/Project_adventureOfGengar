@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "core/Settings.h"
 #include "core/Types.h"
 
 namespace gengar {
@@ -17,7 +18,7 @@ class Effects {
   void Pop(Vec2 p, const std::string& text, Color color = Color{});
   void AddRing(Vec2 center);
   void AddChunk(Vec2 topLeft);  // 무너지는 발판 조각
-  void Shake(float amount) { shake_ = std::max(shake_, amount); }
+  void Shake(float amount) { shake_ = std::max(shake_, amount * ShakeScale(Prefs())); }
   void Flash() { flash_ = 14; }
 
   float ShakeAmount() const { return shake_; }

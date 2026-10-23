@@ -20,7 +20,9 @@ C++17 + SDL2로 만든 2D 횡스크롤 액션 게임. 같은 소스로 **웹(Web
 
 키 배치는 [Source/Private/platform/Input.cpp](Source/Private/platform/Input.cpp)의 바인딩 표에서 바꾼다.
 
-타이틀 화면에서 **G**를 누르면 모든 도트 스프라이트를 한눈에 보는 갤러리가 열린다. (개발용)
+타이틀 화면은 메인 메뉴다: NEW GAME / **BOSS BATTLE**(코인 150개를 들고 상점에서 시작해, 나가면 바로 보스전) / STAGE SELECT / CONTROLS / SETTINGS / SPRITE GALLERY / QUIT(웹 제외).
+SETTINGS에서 효과음 크기, 화면 흔들림, 점프 방식(FIXED 고정 높이 / VARIABLE 짧게=낮게·꾹=높게 / SHORT TAP 짧게 누르면 더 낮게)을 바꾼다. 설정은 저장되지 않고 실행할 때마다 기본값으로 돌아간다.
+메인 메뉴에서 **G**를 눌러도 스프라이트 갤러리가 열린다. (개발용)
 
 ## 실행하기
 

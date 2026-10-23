@@ -94,6 +94,25 @@ void Game::StartNewRun() {
   StartStage(false);
 }
 
+// 앞 스테이지를 건너뛴 만큼 상점에서 샀을 법한 강화를 미리 지급한다.
+void Game::StartAtStage(int stage) {
+  session_.Reset();
+  session_.stage = Clamp(stage, 0, cfg::kStageCount - 1);
+  auto give = [&](UpgradeId id, int lv) { session_.Level(id) = lv; };
+  if (session_.stage >= 1) {
+    give(UpgradeId::Power, 1); give(UpgradeId::Rate, 1); give(UpgradeId::MaxHp, 1); give(UpgradeId::Speed, 1);
+  }
+  StartStage(false);
+}
+
+// 보스전 연습: 업그레이드 없이 코인 150개를 들고 상점에서 시작한다. 상점을 나가면 바로 보스전이다.
+void Game::StartBossFromShop() {
+  session_.Reset();
+  session_.stage = cfg::kBossStage - 1;  // 상점을 나가면 stage + 1 = 보스 스테이지
+  session_.coins = 150;
+  GoShop();
+}
+
 void Game::StartStage(bool retry) {
   if (!retry) session_.TakeSnapshot();
   DebugLog("[game] stage %d start (retry=%d) coins=%d lives=%d score=%d", session_.stage + 1, retry ? 1 : 0, session_.coins, session_.lives, session_.score);

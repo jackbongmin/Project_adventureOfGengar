@@ -12,6 +12,7 @@
 #include "core/DebugOptions.h"
 #include "core/Config.h"
 #include "core/Session.h"
+#include "core/Settings.h"
 #include "data/PlayerStats.h"
 #include "platform/Audio.h"
 #include "platform/Graphics.h"
@@ -94,7 +95,8 @@ void Player::Update(World& w) {
     w.Fx().Burst(c, 10, Hex(0xd9b8ff), 2.5f, 18.f);  // 발밑에서 보랏빛이 팡
     w.Snd().Tone(520.f, 1040.f, 0.1f, Wave::Square, 0.05f);
   }
-  if (!intent_.jumpHeld && vel.y < -3.5f) vel.y *= 0.8f;
+  // 가변 점프: 점프 키를 일찍 떼면 상승을 깎는다. 설정에 따라 고정 높이 / 보통 / 더 낮게.
+  if (Prefs().jump != JumpControl::Fixed && !intent_.jumpHeld && vel.y < -3.5f) vel.y *= Prefs().jump == JumpControl::ShortTap ? 0.6f : 0.8f;
 
   if (dashTimer_ == 0) vel.y = std::min(vel.y + cfg::kGravity, cfg::kMaxFall);  // 대시 중에는 수평으로 곧게
   MoveAndCollide(w);

@@ -24,6 +24,7 @@ class Audio {
   bool Init();
   void Shutdown();
 
+  void SetVolume(float volume01) { volume_ = volume01; }  // 전체 효과음 크기 0~1
   void Play(Sfx sfx);
   // f0에서 f1까지 지수 슬라이드하며 dur초 동안 재생
   void Tone(float f0, float f1, float dur, Wave wave, float volume);
@@ -39,6 +40,7 @@ class Audio {
 
   uint32_t device_ = 0;  // SDL_AudioDeviceID
   float rate_ = 44100.f;
+  float volume_ = 1.f;
   std::vector<Voice> voices_;
 };
 
