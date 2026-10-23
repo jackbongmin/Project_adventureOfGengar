@@ -5,6 +5,7 @@
 #include "core/Config.h"
 #include "core/Game.h"
 #include "core/Settings.h"
+#include "core/Version.h"
 #include "platform/Audio.h"
 #include "platform/Graphics.h"
 #include "platform/Input.h"
@@ -54,6 +55,10 @@ void DrawPixelPanel(Graphics& g, float x, float y, float w, float h) {
   g.FillRect(x + 4.f * p, y + 5.f * p, p, p, Hex(0x3e1d6a));
   g.FillRect(x + w - 7.f * p, y + h - 5.f * p, 3.f * p, p, Hex(0x12061f));
   g.FillRect(x + w - 5.f * p, y + h - 6.f * p, p, p, Hex(0x12061f));
+}
+
+void DrawVersion(Graphics& g) {
+  g.Text(version::kLabel, static_cast<float>(cfg::kScreenW) - 12.f, static_cast<float>(cfg::kScreenH) - 22.f, 2, Hex(0x8a74b0), Align::Right);
 }
 
 bool UpdateSettingsMenu(Game& game, int& cursor) {

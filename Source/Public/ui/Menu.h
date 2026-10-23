@@ -15,6 +15,9 @@ void DrawMenuRow(Graphics& g, const std::string& text, float x, float y, bool se
 // 모서리가 계단처럼 깎인 도트 테두리 패널 (그림자 + 바깥 테두리 + 안쪽 하이라이트)
 void DrawPixelPanel(Graphics& g, float x, float y, float w, float h);
 
+// 화면 오른쪽 아래에 게임 버전. Game::Frame 이 모든 화면 위에 그린다.
+void DrawVersion(Graphics& g);
+
 // ---- 설정 화면 (효과음 크기 / 화면 흔들림 / 점프 방식 / BACK) ----
 enum SettingItem { kSettingVolume, kSettingShake, kSettingJump, kSettingBack, kSettingCount };
 

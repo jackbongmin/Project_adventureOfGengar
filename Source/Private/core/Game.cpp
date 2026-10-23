@@ -2,6 +2,8 @@
 
 #include <SDL.h>
 
+#include <string>
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
@@ -9,6 +11,7 @@
 #include "art/Art.h"
 #include "core/Config.h"
 #include "core/DebugOptions.h"
+#include "core/Version.h"
 #include "mode/GameOverMode.h"
 #include "mode/IntroMode.h"
 #include "mode/PlayMode.h"
@@ -16,6 +19,7 @@
 #include "mode/SpriteGalleryMode.h"
 #include "mode/TitleMode.h"
 #include "mode/VictoryMode.h"
+#include "ui/Menu.h"
 
 namespace gengar {
 
@@ -34,7 +38,8 @@ bool Game::Init() {
     SDL_Log("SDL_Init failed: %s", SDL_GetError());
     return false;
   }
-  if (!gfx_.Init("Adventure of Gengar", cfg::kScreenW, cfg::kScreenH)) {
+  const std::string title = std::string("Adventure of Gengar ") + version::kLabel;
+  if (!gfx_.Init(title.c_str(), cfg::kScreenW, cfg::kScreenH)) {
     SDL_Log("Graphics init failed: %s", SDL_GetError());
     return false;
   }
@@ -72,6 +77,7 @@ void Game::Frame() {
 
   gfx_.Begin(Rgb(0, 0, 0));
   if (mode_) mode_->Render(gfx_);
+  DrawVersion(gfx_);  // 어느 화면에서든 오른쪽 아래에 버전 (빌드 구분용)
   gfx_.End();
 }
 
