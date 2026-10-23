@@ -765,4 +765,168 @@ const std::vector<std::string>& TreasureHat() {
   return rows;
 }
 
+// ---- 상점 업그레이드 아이콘 ----
+
+const std::vector<std::string>& IconPower() {
+  static const std::vector<std::string> rows = {
+      "..........oo",
+      ".........owo",
+      "........owso",
+      ".......owso.",
+      "......owso..",
+      "..oo.owso...",
+      "..oyowso....",
+      "...oyso.....",
+      "...odyyo....",
+      "..odo.oyo...",
+      ".odo...oo...",
+      ".oo.........",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconRate() {
+  static const std::vector<std::string> rows = {
+      "......oooo..",
+      ".....oyyyo..",
+      ".....oyyo...",
+      "....oyyo....",
+      "....oyyooo..",
+      "...oyyyyyo..",
+      "...oooyyo...",
+      ".....oyyo...",
+      ".....oyo....",
+      "....oyo.....",
+      "....oo......",
+      "............",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconMulti() {
+  static const std::vector<std::string> rows = {
+      "....ooo.....",
+      "...owppo....",
+      "...opppo....",
+      "...ommmo....",
+      "....ooo.....",
+      "............",
+      ".ooo....ooo.",
+      "owppo..owppo",
+      "opppo..opppo",
+      "ommmo..ommmo",
+      ".ooo....ooo.",
+      "............",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconMaxHp() {
+  static const std::vector<std::string> rows = {
+      ".oo.oo......",
+      "oRRoRRo.....",
+      "oRWRRRo.....",
+      "oRRRRRo.....",
+      ".oRRRo......",
+      "..oRo..ooo..",
+      "...o...ogo..",
+      ".....ooogooo",
+      ".....ogggggo",
+      ".....ooogooo",
+      ".......ogo..",
+      ".......ooo..",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconDoubleJump() {
+  static const std::vector<std::string> rows = {
+      ".....oo.....",
+      "....occo....",
+      "...occcco...",
+      "..occoocco..",
+      ".occo..occo.",
+      ".ooo....ooo.",
+      ".....oo.....",
+      "....occo....",
+      "...occcco...",
+      "..occoocco..",
+      ".occo..occo.",
+      ".ooo....ooo.",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconSpeed() {
+  static const std::vector<std::string> rows = {
+      "............",
+      "oo....oo....",
+      "ogo...ogo...",
+      "oggo..oggo..",
+      ".oggo..oggo.",
+      "..oggo..oggo",
+      "..oggo..oggo",
+      ".oggo..oggo.",
+      "oggo..oggo..",
+      "ogo...ogo...",
+      "oo....oo....",
+      "............",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconUlt() {
+  static const std::vector<std::string> rows = {
+      ".....oo.....",
+      "....oKko....",
+      "....okko....",
+      "oooookkooooo",
+      "oKkkkkkkkkko",
+      ".okkkkkkkko.",
+      "..okkkkkko..",
+      "..okkkkkko..",
+      ".okkkookkko.",
+      ".okko..okko.",
+      "oko......oko",
+      "oo........oo",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconLife() {
+  static const std::vector<std::string> rows = {
+      "o..........o",
+      "oo........oo",
+      "opoooooooopo",
+      "oppppppppppo",
+      "oppwrppwrppo",
+      "oppwwppwwppo",
+      "oppppppppppo",
+      "opwwwwwwwwpo",
+      "oppwpwpwpppo",
+      "oppppppppppo",
+      "oppoppppoppo",
+      ".oo.oooo.oo.",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconDepart() {
+  static const std::vector<std::string> rows = {
+      "............",
+      "......oo....",
+      "......owo...",
+      "......owwo..",
+      "ooooooowwwo.",
+      "owwwwwwwwwwo",
+      "oyyyyyyyyyyo",
+      "ooooooodyyo.",
+      "......odyo..",
+      "......odo...",
+      "......oo....",
+      "............",
+  };
+  return rows;
+}
+
 }  // namespace gengar::art::data

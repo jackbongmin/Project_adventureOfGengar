@@ -1,6 +1,8 @@
 #include "mode/TitleMode.h"
 
+#include <algorithm>
 #include <cmath>
+#include <initializer_list>
 #include <string>
 
 #include "actor/PhantomArt.h"
@@ -41,6 +43,49 @@ constexpr int kMainShown = kMainCount;
 #endif
 
 int Wrap(int v, int n) { return (v % n + n) % n; }
+
+// 조작법: 키를 키캡으로 그리고 이동 / 행동 / 메뉴로 묶는다.
+struct ControlRow {
+  std::initializer_list<const char*> keys;
+  const char* action;
+  const char* note;  // 옅은 색 보충 설명 (없으면 "")
+};
+struct ControlGroup {
+  const char* name;
+  Color color;
+  std::initializer_list<ControlRow> rows;
+};
+
+void DrawControls(Graphics& g) {
+  const ControlGroup groups[] = {
+      {"MOVE", Hex(0x6fe08a), {{{"LEFT", "RIGHT"}, "MOVE", ""}, {{"C", "SPACE", "UP"}, "JUMP", "HOLD = HIGHER"}}},
+      {"ACTION", Hex(0xff6a6a), {{{"Z"}, "SHADOW BALL", "HOLD = REPEAT"}, {{"X", "SHIFT"}, "DASH", "DODGES ATTACKS"}, {{"A"}, "ULTIMATE", "WHEN GAUGE IS FULL"}}},
+      {"MENU", Hex(0xc58bff), {{{"ESC", "P"}, "PAUSE", ""}, {{"ENTER"}, "SELECT", ""}}},
+  };
+  constexpr float kPanelX = 110.f, kPanelY = 112.f, kPanelW = 740.f, kKeysRight = 400.f;
+  DrawPixelPanel(g, kPanelX, kPanelY, kPanelW, 340.f);
+  float y = kPanelY + 22.f;
+  for (const ControlGroup& grp : groups) {
+    // 분류 이름 + 색 띠
+    g.FillRect(kPanelX + 24.f, y + 2.f, 4.f, 14.f, grp.color);
+    g.Text(grp.name, kPanelX + 34.f, y + 2.f, 2, grp.color, Align::Left, false);
+    for (float x = kPanelX + 34.f + static_cast<float>(g.TextWidth(grp.name, 2)) + 10.f; x < kPanelX + kPanelW - 24.f; x += 12.f) g.FillRect(x, y + 8.f, 4.f, 2.f, Hex(0x3e1d6a));
+    y += 24.f;
+    for (const ControlRow& row : grp.rows) {
+      float w = 0.f;  // 키캡들을 오른쪽 정렬하려고 폭을 먼저 잰다
+      for (const char* k : row.keys) {
+        const std::string s = k;
+        w += (s == "UP" || s == "DOWN" || s == "LEFT" || s == "RIGHT" ? 26.f : std::max(26.f, static_cast<float>(g.TextWidth(s, 2)) + 14.f)) + 6.f;
+      }
+      float x = kKeysRight - w;
+      for (const char* k : row.keys) x += DrawKeyCap(g, k, x, y) + 6.f;
+      g.Text(row.action, kKeysRight + 18.f, y + 6.f, 2, Hex(0xffffff));
+      if (row.note[0] != '\0') g.Text(row.note, kKeysRight + 18.f + static_cast<float>(g.TextWidth(row.action, 2)) + 16.f, y + 6.f, 2, Hex(0x9a82c0), Align::Left, false);
+      y += 32.f;
+    }
+    y += 6.f;
+  }
+}
 
 }  // namespace
 
@@ -135,23 +180,16 @@ void TitleMode::Render(Graphics& g) {
   if (screen_ == Screen::Stages) {
     for (int i = 0; i < cfg::kBossStage; ++i) DrawMenuRow(g, "STAGE " + std::to_string(i + 1), W * 0.5f, 190.f + static_cast<float>(i) * 50.f, i == cursor_, frame_);
     DrawMenuRow(g, "BACK", W * 0.5f, 190.f + static_cast<float>(cfg::kBossStage) * 50.f, cursor_ == cfg::kBossStage, frame_);
-    g.Text("YOU START WITH THE UPGRADES YOU WOULD NORMALLY HAVE BOUGHT BY THEN", W * 0.5f, 480, 2, Hex(0x9a82c0), Align::Center);
-    g.Text("ESC - BACK", W * 0.5f, 508, 2, Hex(0x9a82c0), Align::Center);
+    g.Text("YOU START WITH THE UPGRADES YOU WOULD NORMALLY HAVE BOUGHT BY THEN", W * 0.5f, 466, 2, Hex(0x9a82c0), Align::Center);
+    DrawKeyHints(g, {{{"UP", "DOWN"}, "SELECT"}, {{"ENTER"}, "START"}, {{"ESC"}, "BACK"}}, W * 0.5f, 500.f);
   } else if (screen_ == Screen::Controls) {
-    const char* lines[][2] = {
-        {"< >", "MOVE"}, {"C / SPACE / UP", "JUMP (HOLD = HIGHER)"}, {"Z", "SHADOW BALL (HOLD TO REPEAT)"},
-        {"X / L-SHIFT", "DASH - DODGES ATTACKS"}, {"A", "ULTIMATE (WHEN GAUGE IS FULL)"}, {"ESC / P", "PAUSE"},
-    };
-    for (int i = 0; i < 6; ++i) {
-      const float y = 160.f + static_cast<float>(i) * 40.f;
-      g.Text(lines[i][0], 330, y, 3, Hex(0xffe27a), Align::Right);
-      g.Text(lines[i][1], 360, y, 3, Hex(0xe6d6ff), Align::Left);
-    }
-    g.Text("COLLECT COINS, BUY UPGRADES IN THE SHOP, BEAT THE VOID LORD", W * 0.5f, 450, 2, Hex(0x9a82c0), Align::Center);
-    g.Text("ENTER - BACK", W * 0.5f, 508, 2, Hex(0x9a82c0), Align::Center);
+    DrawControls(g);
+    g.Text("COLLECT COINS, BUY UPGRADES IN THE SHOP, BEAT THE VOID LORD", W * 0.5f, 470, 2, Hex(0x9a82c0), Align::Center);
+    DrawKeyHints(g, {{{"ENTER"}, "BACK"}}, W * 0.5f, 500.f);
   } else {
-    DrawSettingsMenu(g, cursor_, frame_, 190.f, 450.f);
-    g.Text("LEFT / RIGHT - CHANGE    ESC - BACK", W * 0.5f, 508, 2, Hex(0x9a82c0), Align::Center);
+    DrawPixelPanel(g, 150.f, 116.f, 660.f, 300.f);
+    DrawSettingsMenu(g, cursor_, frame_, 174.f, 138.f, 612.f, 382.f);
+    DrawKeyHints(g, {{{"UP", "DOWN"}, "SELECT"}, {{"LEFT", "RIGHT"}, "CHANGE"}, {{"ESC"}, "BACK"}}, W * 0.5f, 500.f);
   }
 }
 

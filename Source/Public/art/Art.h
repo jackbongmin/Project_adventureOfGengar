@@ -28,6 +28,8 @@ struct Assets {
   SpriteId wave[2];
   SpriteId pennant[3];
   SpriteId moon = kNoSprite;
+  SpriteId upgradeIcon[8];  // 상점 아이콘, UpgradeId 순서 (Power, Rate, Multi, MaxHp, DoubleJump, Speed, Ult, Life)
+  SpriteId departIcon = kNoSprite;  // 상점의 "다음 스테이지로" 줄
   TileSet tiles[3];     // 스테이지(테마)별
   SpriteId boss[3];     // 보스 단계별 색
   SpriteId bossHand[3];

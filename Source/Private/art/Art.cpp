@@ -1,6 +1,7 @@
 #include "art/Art.h"
 
 #include "art/SpriteData.h"
+#include "core/Session.h"
 
 namespace gengar::art {
 namespace {
@@ -28,6 +29,11 @@ const Pal kBall = {{'r', Hex(0xb36bff)}, {'m', Hex(0x5a2aa8)}, {'d', Hex(0x14062
 const Pal kOrb = {{'o', Hex(0x8a1a5a)}, {'p', Hex(0xff5ca8)}, {'w', Hex(0xffffff)}};
 const Pal kWave = {{'p', Hex(0xc58bff)}, {'w', Hex(0xffffff)}, {'o', Hex(0x5a2a98)}};
 const Pal kPennant = {{'l', Hex(0xc38bff)}, {'p', Hex(0xa24bff)}, {'o', Hex(0x4a1a8a)}};
+// 상점 아이콘 공용 팔레트
+const Pal kUiIcon = {{'o', Hex(0x1a0830)}, {'w', Hex(0xffffff)}, {'s', Hex(0xb8b8dc)}, {'y', Hex(0xffd24a)},
+                     {'d', Hex(0xb07020)}, {'R', Hex(0xff4f86)}, {'W', Hex(0xffd0e0)}, {'g', Hex(0x6fe08a)},
+                     {'c', Hex(0x7ae0ff)}, {'k', Hex(0xff7ab8)}, {'K', Hex(0xffe0f0)}, {'p', Hex(0x9a5cff)},
+                     {'m', Hex(0x4a2490)}, {'r', Hex(0xff2a4a)}};
 const Pal kMoon = {{'m', Hex(0xf3e7ff)}, {'M', Hex(0xffffff)}, {'d', Hex(0xc9b0ee)}, {'c', Hex(0xb6a0dc)}};
 
 Pal HoundPal(Color eye) {
@@ -102,6 +108,11 @@ void Init(Graphics& g) {
   a.pennant[1] = g.CreateSprite(data::Pennant1(), kPennant);
   a.pennant[2] = g.CreateSprite(data::Pennant2(), kPennant);
   a.moon = g.CreateSprite(data::Moon(), kMoon);
+  static_assert(sizeof(a.upgradeIcon) / sizeof(a.upgradeIcon[0]) == kUpgradeCount, "upgradeIcon must match UpgradeId");
+  const std::vector<std::string>& (*icons[])() = {data::IconPower, data::IconRate,       data::IconMulti, data::IconMaxHp,
+                                                  data::IconDoubleJump, data::IconSpeed, data::IconUlt,   data::IconLife};
+  for (int i = 0; i < kUpgradeCount; ++i) a.upgradeIcon[i] = g.CreateSprite(icons[i](), kUiIcon);
+  a.departIcon = g.CreateSprite(data::IconDepart(), kUiIcon);
 
   for (int i = 0; i < 3; ++i) {
     TileSet& t = a.tiles[i];

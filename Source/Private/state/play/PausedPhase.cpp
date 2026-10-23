@@ -122,7 +122,10 @@ class PausedPhase : public PlayPhase {
     Title(g, "PAUSED", py + 30.f, 6);
     const Session& s = m.GetGame().Sess();
     const std::string where = s.stage == cfg::kBossStage ? "BOSS STAGE" : "STAGE " + std::to_string(s.stage + 1);
-    g.Text(where + "   LIFE x" + std::to_string(s.lives) + "   COIN " + std::to_string(s.coins), kCx, py + 86.f, 2, Hex(0x9a82c0), Align::Center);
+    const std::string info = where + "   LIFE x" + std::to_string(s.lives) + "   ";
+    const float infoW = static_cast<float>(g.TextWidth(info, 2)) + 20.f + static_cast<float>(g.TextWidth(std::to_string(s.coins), 2));
+    g.Text(info, kCx - infoW * 0.5f, py + 86.f, 2, Hex(0x9a82c0));
+    DrawCoinAmount(g, s.coins, kCx - infoW * 0.5f + static_cast<float>(g.TextWidth(info, 2)), py + 86.f, 2, Hex(0xffe27a));
     Divider(g, py + 110.f, pw - 80.f);
 
     for (int i = 0; i < kPauseCount; ++i) DrawMenuRow(g, kItems[i].label, kCx, py + 128.f + static_cast<float>(i) * 40.f, i == cursor_, frame_);
@@ -135,8 +138,8 @@ class PausedPhase : public PlayPhase {
     DrawPixelPanel(g, 150.f, 64.f, 660.f, 420.f);
     Title(g, "SETTINGS", 92.f, 5);
     Divider(g, 146.f, 580.f);
-    DrawSettingsMenu(g, cursor_, frame_, 172.f, 400.f);
-    g.Text("LEFT / RIGHT - CHANGE    ESC - BACK", kCx, 440.f, 2, Hex(0x9a82c0), Align::Center);
+    DrawSettingsMenu(g, cursor_, frame_, 174.f, 164.f, 612.f, 400.f);
+    DrawKeyHints(g, {{{"UP", "DOWN"}, "SELECT"}, {{"LEFT", "RIGHT"}, "CHANGE"}, {{"ESC"}, "BACK"}}, kCx, 434.f);
   }
 
   void RenderConfirm(Graphics& g) const {

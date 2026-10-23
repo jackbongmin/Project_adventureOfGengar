@@ -9,6 +9,7 @@
 #include "core/Config.h"
 #include "core/Session.h"
 #include "platform/Graphics.h"
+#include "ui/Menu.h"
 #include "world/World.h"
 
 namespace gengar {
@@ -21,7 +22,8 @@ void DrawHud(Graphics& g, const World& w, const Session& s) {
   for (int i = 0; i < p.MaxHp(); ++i) g.DrawSprite(i < p.Hp() ? art::A().heartFull : art::A().heartEmpty, 12.f + static_cast<float>(i) * 28.f, 10.f, 3);
   g.Text("LIFE x" + std::to_string(s.lives), 26.f + static_cast<float>(p.MaxHp()) * 28.f + 10.f, 15, 2, Hex(0xd9c2ff));
 
-  g.Text("$ " + std::to_string(s.coins), 480, 15, 2, Hex(0xffe27a), Align::Center);
+  const float coinW = 20.f + static_cast<float>(g.TextWidth(std::to_string(s.coins), 2));  // 코인 아이콘(16) + 틈(4) + 숫자
+  DrawCoinAmount(g, s.coins, 480.f - coinW * 0.5f, 15.f, 2, Hex(0xffe27a));
 
   const bool full = s.gauge >= 100.f;
   const float gx = 600.f, gw = 130.f;

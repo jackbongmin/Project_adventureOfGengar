@@ -40,5 +40,15 @@ const std::vector<std::string>& BossHand();
 const std::vector<std::string>& PhantomHappy0();
 const std::vector<std::string>& PhantomHappy1();
 const std::vector<std::string>& TreasureHat();
+// 상점 업그레이드 아이콘 (12x12, 팔레트 kUiIcon). 순서는 UpgradeId 와 같다.
+const std::vector<std::string>& IconPower();
+const std::vector<std::string>& IconRate();
+const std::vector<std::string>& IconMulti();
+const std::vector<std::string>& IconMaxHp();
+const std::vector<std::string>& IconDoubleJump();
+const std::vector<std::string>& IconSpeed();
+const std::vector<std::string>& IconUlt();
+const std::vector<std::string>& IconLife();
+const std::vector<std::string>& IconDepart();
 
 }  // namespace gengar::art::data
