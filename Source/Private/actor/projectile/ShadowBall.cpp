@@ -14,11 +14,13 @@ namespace gengar {
 ShadowBall::ShadowBall(Vec2 center, Vec2 velocity, float radius, float damage, int life)
     : Actor(ActorKind::PlayerShot), radius_(radius), damage_(damage), life_(life) {
   pos = center;
+  origin_ = center;
   vel = velocity;
   size = {radius * 2.f, radius * 2.f};
 }
 
 void ShadowBall::Update(World& w) {
+  history_[age_ % kHistory] = pos;
   pos += vel;
   ++age_;
   const Color puff = Hex(0x9a5cff);
@@ -55,7 +57,21 @@ void ShadowBall::Update(World& w) {
 }
 
 void ShadowBall::Render(Graphics& gfx, const World&) {
-  DrawShadowBall(gfx, pos, radius_ * std::min(1.f, static_cast<float>(life_) / 10.f), static_cast<float>(age_));
+  const float t = static_cast<float>(age_);
+  const float r = radius_ * std::min(1.f, static_cast<float>(life_) / 10.f);
+  // 발사 임팩트: 출발점에서 퍼지며 옅어지는 도트 고리
+  if (age_ < 7) {
+    const float k = t / 7.f;
+    gfx.PixelRing(origin_.x, origin_.y, radius_ * 0.8f + t * 3.f, 3.f, Rgb(225, 190, 255, static_cast<int>((1.f - k) * 220.f)), 3.f);
+  }
+  // 잔상: 오래된 것부터 그려서 본체가 맨 위에 오게 한다
+  for (int k = kGhosts; k >= 1; --k) {
+    const int back = k * kGhostStride;
+    if (back > age_) continue;
+    const Vec2 p = history_[(age_ - back) % kHistory];
+    DrawShadowBall(gfx, p, r * (1.f - 0.12f * static_cast<float>(k)), t, 0.5f - 0.13f * static_cast<float>(k));
+  }
+  DrawShadowBall(gfx, pos, r, t);
 }
 
 }  // namespace gengar

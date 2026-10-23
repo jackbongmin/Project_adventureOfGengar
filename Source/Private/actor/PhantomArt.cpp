@@ -64,12 +64,13 @@ void DrawTreasureHat(Graphics& g, Vec2 bc, float scale, float glow, float t, flo
   }
 }
 
-void DrawShadowBall(Graphics& g, Vec2 c, float r, float t) {
+void DrawShadowBall(Graphics& g, Vec2 c, float r, float t, float alpha) {
   if (r < 3.f) return;
   const art::Assets& a = art::A();
+  if (alpha >= 1.f) g.Glow(c.x, c.y, r * 1.9f, Rgb(160, 90, 255, 70));
   const int ps = Clamp(static_cast<int>(std::lround(r * 2.f / 8.f)), 1, 4);
   const SpriteId id = a.ball[(static_cast<int>(t / 4.f)) % 2];
-  g.DrawSprite(id, c.x - 4.f * static_cast<float>(ps), c.y - 4.f * static_cast<float>(ps), ps);
+  g.DrawSprite(id, c.x - 4.f * static_cast<float>(ps), c.y - 4.f * static_cast<float>(ps), ps, false, alpha);
 }
 
 }  // namespace gengar

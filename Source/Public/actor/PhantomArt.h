@@ -20,6 +20,7 @@ void DrawPhantom(Graphics& gfx, Vec2 center, int facing, float time, float scale
 Vec2 PhantomHatAnchor(Vec2 center, int facing, float time, float scale = 1.f, Vec2 squash = {1.f, 1.f});
 // bottomCenter = 모자 챙 아래 중앙. glow > 0 이면 빛과 반짝이를 함께 그린다.
 void DrawTreasureHat(Graphics& gfx, Vec2 bottomCenter, float scale, float glow, float time, float alpha = 1.f);
-void DrawShadowBall(Graphics& gfx, Vec2 center, float radius, float time);
+// radius 에 맞는 정수 도트 배율로 그리고, 둘레에 radius 에 비례하는 빛을 깐다. alpha < 1 이면 잔상용으로 빛 없이 반투명하게.
+void DrawShadowBall(Graphics& gfx, Vec2 center, float radius, float time, float alpha = 1.f);
 
 }  // namespace gengar

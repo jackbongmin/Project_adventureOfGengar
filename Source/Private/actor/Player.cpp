@@ -160,6 +160,7 @@ void Player::Shoot(World& w) {
     w.Spawn<ShadowBall>(origin, Vec2{static_cast<float>(facing_) * 8.f, spreads[n - 1][i]}, stats::ShotRadius(s),
                         stats::Damage(s), stats::ShotLife(s));
   }
+  w.Fx().Burst(origin, 5, Hex(0xc58bff), 2.2f, 10.f);  // 손끝에서 튀는 불꽃 (발사 임팩트)
   cooldown_ = stats::FireCooldown(s);
   w.Snd().Play(Sfx::Shoot);
 }
