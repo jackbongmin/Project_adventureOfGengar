@@ -28,6 +28,8 @@ class Enemy : public Character {
 
  private:
   void ContactPlayer(World& world);
+
+  int stompGrace_ = 0;  // 밟힌 직후 몇 프레임은 플레이어와 겹쳐도 몸통 피해를 주지 않는다 (튕겨 나가는 중)
 };
 
 }  // namespace gengar

@@ -46,7 +46,7 @@ int Wrap(int v, int n) { return (v % n + n) % n; }
 
 void TitleMode::Update(Game& game) {
   ++frame_;
-  if (Debug().bot && frame_ > 30) { game.StartNewRun(); return; }  // bot=1 이면 시네마틱 없이 자동 시작
+  if ((Debug().bot || Debug().stompDemo > 0) && frame_ > 30) { game.StartNewRun(); return; }  // bot=1 / stompdemo 면 시네마틱 없이 자동 시작
   switch (screen_) {
     case Screen::Main: UpdateMain(game); break;
     case Screen::Stages: UpdateStages(game); break;

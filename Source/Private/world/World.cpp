@@ -29,6 +29,11 @@ World::World(GameContext& ctx, int stageIndex)
     player_->pos = {13.f * T, 12.f * T - 31.f};
     Spawn<Hound>(Vec2{14.f * T, 15.f * T - 24.f}, stage_)->ForceAlert();
   }
+  if (Debug().stompDemo > 0) {  // 높은 곳에서 떨어져 가만히 선 늑대를 밟는다. 튕긴 뒤 다시 떨어져 한 번 더 밟는다.
+    constexpr float T = static_cast<float>(cfg::kTile);
+    player_->pos = {5.f * T + 6.f, 5.f * T + static_cast<float>(Debug().stompDemo - 1)};
+    Spawn<Hound>(Vec2{5.f * T, 15.f * T - 24.f}, stage_)->SetController(nullptr);
+  }
   if (Debug().heartDemo) Spawn<Heart>(Vec2{3.f * cfg::kTile + 16.f, 14.f * cfg::kTile + 16.f});
   for (const SpawnPoint& sp : level_.Spawns()) {
     switch (sp.type) {

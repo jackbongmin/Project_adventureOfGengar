@@ -29,6 +29,7 @@ void Apply(const std::string& key, const std::string& value) {
   else if (key == "shop") g_options.startInShop = Truthy(value);
   else if (key == "heartdemo") g_options.heartDemo = Truthy(value);
   else if (key == "heightdemo") g_options.heightDemo = Truthy(value);
+  else if (key == "stompdemo") g_options.stompDemo = value.empty() ? 1 : std::max(0, std::min(32, std::atoi(value.c_str())));
   else if (key == "hp") g_options.startHp = std::atoi(value.c_str());
 }
 

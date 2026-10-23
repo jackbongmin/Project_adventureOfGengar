@@ -21,6 +21,7 @@ struct DebugOptions {
   bool startInShop = false;  // 시작하자마자 상점 화면 (상점 UI 검증용)
   bool heartDemo = false;    // 시작 지점 근처에 하트를 하나 추가 (하트 규칙 검증용)
   bool heightDemo = false;   // 플레이어를 위 발판에 올리고 아래에 추적 중인 늑대 배치 (추적 포기 검증용)
+  int stompDemo = 0;         // >0: 멈춰 선 늑대 머리 위에서 떨어뜨림. 값(1~32)만큼 시작 높이를 1px씩 바꿔 파고드는 깊이를 달리한다 (밟기 판정 검증용)
   int startHp = 0;           // >0 이면 플레이어 시작 체력
 };
 
