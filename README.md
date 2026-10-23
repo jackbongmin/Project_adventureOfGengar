@@ -60,6 +60,8 @@ Source/
 web/shell.html  웹 빌드용 페이지 틀
 scripts/        빌드 스크립트
 tools/spritegen 도트 스프라이트 생성기 (Node)
+tools/icongen   exe 아이콘 생성기: 보물 모자 도트로 res/windows/gengar.ico 를 만든다 (Python + Pillow)
+res/windows     exe 아이콘과 리소스 파일
 prototype-html/ 처음 만든 HTML 프로토타입 (참고용)
 docs/           설계 문서
 ```

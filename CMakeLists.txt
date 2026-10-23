@@ -28,6 +28,9 @@ else()
     $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
     $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>)
   set_target_properties(gengar PROPERTIES OUTPUT_NAME AdventureOfGengar)
+  if(WIN32)
+    target_sources(gengar PRIVATE "${CMAKE_SOURCE_DIR}/res/windows/gengar.rc")  # 보물 모자 아이콘
+  endif()
   # 배포용 빌드(scripts/build_win.ps1): vcpkg x64-windows-static 과 함께 쓰면 SDL2 와 C++ 런타임이
   # exe 안에 들어가서, 받는 사람은 Visual Studio 나 DLL 없이 exe 하나로 실행할 수 있다.
   option(GENGAR_DIST "Static C++ runtime and no console window" OFF)
