@@ -136,6 +136,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build_win.ps1            # vcpk
 | `god=1` | 피격 무적 (낙사는 여전히 사망) |
 | `log=1` | 스테이지/상점/보스 패턴/피격 출처 등 이벤트를 콘솔에 출력 |
 | `speed=8` | 배속 (1~16) |
+| `perf=1` | 2초마다 fps, 프레임 간격, 렌더 시간, 프레임당 로직 스텝 수, 그리기 호출 수를 출력 (끊김 진단용. exe는 `Start-Process -RedirectStandardOutput`로 받는다) |
 | `stage=2` `coins=100` `hp=1` | 시작 스테이지(0~2) / 시작 코인 / 시작 체력 |
 | `shop=1` | 시작하자마자 상점 (타이틀에서 Enter) |
 | `bossphase=0~2` `bosshp=N` `immortal=1` | 보스전 검증: 시작 단계 / 체력 / 불사 |

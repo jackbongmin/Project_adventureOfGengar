@@ -103,13 +103,16 @@ void World::UpdateEffects() { fx_.Update(); }
 
 void World::Render(Graphics& gfx) const {
   const float s = fx_.ShakeAmount();
-  const float sx = s > 0.f ? RandRange(-s, s) : 0.f, sy = s > 0.f ? RandRange(-s, s) : 0.f;
+  // 카메라와 흔들림은 정수 픽셀로 맞춘다. 소수점 오프셋이면 스프라이트(floor)와 사각형(round)이 서로 다르게
+  // 반올림돼서, 카메라가 따라가는 동안 캐릭터와 타일 사이가 1px 씩 떨린다.
+  const float sx = s > 0.f ? std::round(RandRange(-s, s)) : 0.f, sy = s > 0.f ? std::round(RandRange(-s, s)) : 0.f;
+  const float camX = std::round(camera_.x);
 
   gfx.SetOffset(sx, sy);
-  RenderLevelBackground(gfx, level_, camera_.x, frame_);
+  RenderLevelBackground(gfx, level_, camX, frame_);
 
-  gfx.SetOffset(camera_.x + sx, sy);
-  RenderLevelTiles(gfx, level_, camera_.x, frame_);
+  gfx.SetOffset(camX + sx, sy);
+  RenderLevelTiles(gfx, level_, camX, frame_);
 
   for (int k = 0; k < kActorKindCount; ++k) {
     const ActorKind kind = static_cast<ActorKind>(k);

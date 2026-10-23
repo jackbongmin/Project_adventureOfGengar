@@ -5,6 +5,7 @@
 //   bot   : 자동 플레이 봇이 조종    god   : 피격 무적(낙사는 여전히 사망)
 //   speed : 배속(로직 스텝 배율)     log   : 주요 이벤트를 콘솔에 출력
 //   bosshp / bossphase(0~2) / immortal : 보스전 검증용 (체력 지정, 시작 단계, 불사)
+//   perf  : 2초마다 프레임 시간/로직 스텝 수/그리기 호출 수를 출력 (프레임 끊김 진단용)
 //   shop  : 시작하자마자 상점 화면   heartdemo / hp=N : 하트 규칙 검증용   heightdemo : 늑대 추적 포기 검증용
 namespace gengar {
 
@@ -15,6 +16,7 @@ struct DebugOptions {
   bool god = false;
   bool bot = false;
   bool log = false;
+  bool perf = false;  // 프레임 시간 통계 출력 (log 없이도 출력)
   int bossHp = 0;      // >0 이면 보스 최대 체력 지정
   int bossPhase = 0;   // 0~2: 해당 단계의 체력 비율에서 시작
   bool immortal = false;  // 보스가 피해를 받지 않음 (패턴 검증용)

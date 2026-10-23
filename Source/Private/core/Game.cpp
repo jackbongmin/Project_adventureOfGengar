@@ -2,6 +2,9 @@
 
 #include <SDL.h>
 
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
 #include <string>
 
 #ifdef __EMSCRIPTEN__
@@ -45,6 +48,8 @@ bool Game::Init() {
   }
   art::Init(gfx_);  // 도트 스프라이트 텍스처 생성
   if (!audio_.Init()) SDL_Log("Audio init failed (sound disabled): %s", SDL_GetError());
+  refreshHz_ = gfx_.RefreshRate();
+  for (double& d : dtHistory_) d = static_cast<double>(cfg::kFixedStep);
   lastCounter_ = SDL_GetPerformanceCounter();
   GoTitle();
   return true;
@@ -65,20 +70,66 @@ void Game::Frame() {
   const uint64_t now = SDL_GetPerformanceCounter();
   const double dt = static_cast<double>(now - lastCounter_) / static_cast<double>(SDL_GetPerformanceFrequency());
   lastCounter_ = now;
-  accumulator_ += std::min(dt, 0.1) * static_cast<double>(Debug().timeScale);
+  accumulator_ += SmoothFrameTime(std::min(dt, 0.1)) * static_cast<double>(Debug().timeScale);
 
+  int steps = 0;
   while (accumulator_ >= static_cast<double>(cfg::kFixedStep)) {
     if (pendingValid_) { mode_ = std::move(pending_); pendingValid_ = false; }
     if (mode_) mode_->Update(*this);
     input_.ClearPressed();
     accumulator_ -= static_cast<double>(cfg::kFixedStep);
+    ++steps;
   }
   if (pendingValid_) { mode_ = std::move(pending_); pendingValid_ = false; }
 
+  const uint64_t renderStart = SDL_GetPerformanceCounter();
   gfx_.Begin(Rgb(0, 0, 0));
   if (mode_) mode_->Render(gfx_);
   DrawVersion(gfx_);  // 어느 화면에서든 오른쪽 아래에 버전 (빌드 구분용)
+  const uint64_t presentStart = SDL_GetPerformanceCounter();
   gfx_.End();
+  if (Debug().perf) RecordPerf(dt, steps, renderStart, presentStart);
+}
+
+// 측정한 프레임 간격은 vsync 가 켜져 있어도 15ms, 18ms, 0.3ms, 33ms 처럼 들쭉날쭉하다. 그대로 누적하면
+// 누적값이 스텝 경계(16.67ms)를 오락가락해서 로직이 0번 도는 프레임(멈춤)과 2번 도는 프레임(건너뜀)이 섞인다.
+// 최근 4프레임의 평균을 쓰고, 그 평균이 vsync 간격의 정수배에 가까우면 정확히 그 값으로 맞춘다.
+double Game::SmoothFrameTime(double dt) {
+  dtHistory_[dtIndex_] = dt;
+  dtIndex_ = (dtIndex_ + 1) % kDtHistory;
+  double avg = 0.0;
+  for (double d : dtHistory_) avg += d;
+  avg /= kDtHistory;
+
+  const double step = static_cast<double>(cfg::kFixedStep);
+  double vsync = refreshHz_ > 0 ? 1.0 / static_cast<double>(refreshHz_) : step;
+  if (std::abs(vsync - step) < 0.0002) vsync = step;  // 59.94Hz 같은 모니터도 60Hz 로 본다 (누적값이 스텝과 딱 맞도록)
+  for (int k = 1; k <= 4; ++k) {
+    if (std::abs(avg - vsync * k) < 0.002) return vsync * k;
+  }
+  return avg;
+}
+
+// --perf: 2초마다 프레임 간격, 렌더(CPU) 시간, 프레임당 로직 스텝 수 분포, 그리기 호출 수를 출력한다.
+// 스텝이 0 이나 2 인 프레임은 화면이 한 번 멈췄다가 두 칸 건너뛰는 프레임이다 (= 눈에 보이는 끊김).
+void Game::RecordPerf(double dt, int steps, uint64_t renderStart, uint64_t presentStart) {
+  const double freq = static_cast<double>(SDL_GetPerformanceFrequency());
+  const uint64_t end = SDL_GetPerformanceCounter();
+  PerfStats& p = perf_;
+  ++p.frames;
+  p.time += dt;
+  p.maxDt = std::max(p.maxDt, dt);
+  p.renderMs += static_cast<double>(presentStart - renderStart) / freq * 1000.0;
+  p.presentMs += static_cast<double>(end - presentStart) / freq * 1000.0;
+  ++p.steps[std::min(steps, 2)];
+  p.drawCalls += gfx_.DrawCalls();
+  if (p.time < 2.0) return;
+  const double n = static_cast<double>(p.frames);
+  std::printf("[perf] %s %dHz fps=%.1f frame avg=%.2fms max=%.2fms | render=%.2fms present=%.2fms | steps 0:%d 1:%d 2+:%d | draws=%d\n",
+              gfx_.RendererName(), gfx_.RefreshRate(), n / p.time, p.time / n * 1000.0, p.maxDt * 1000.0, p.renderMs / n, p.presentMs / n,
+              p.steps[0], p.steps[1], p.steps[2], static_cast<int>(p.drawCalls / p.frames));
+  std::fflush(stdout);
+  p = PerfStats{};
 }
 
 void Game::Run() {

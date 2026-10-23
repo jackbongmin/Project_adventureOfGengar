@@ -34,6 +34,9 @@ class Graphics {
 
   void Begin(Color clear);
   void End();
+  int DrawCalls() const { return drawCalls_; }  // 이번 프레임에 SDL 로 보낸 그리기 호출 수 (perf 진단용)
+  const char* RendererName() const;
+  int RefreshRate() const;  // 창이 있는 모니터의 주사율 (Hz, 모르면 0)
 
   // 화면 좌표 = 월드 좌표 - offset
   void SetOffset(float x, float y) { ox_ = x; oy_ = y; }
@@ -87,6 +90,7 @@ class Graphics {
   SDL_Window* window_ = nullptr;
   SDL_Renderer* renderer_ = nullptr;
   float ox_ = 0.f, oy_ = 0.f, galpha_ = 1.f;
+  int drawCalls_ = 0;
   std::vector<Xf> xf_;
   std::vector<Vec2> scratch_;
   struct SpriteTex {

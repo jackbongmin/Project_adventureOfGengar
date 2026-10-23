@@ -46,6 +46,16 @@ class Game {
 
  private:
   void ChangeMode(std::unique_ptr<GameMode> mode);  // 다음 프레임 시작 시 적용
+  double SmoothFrameTime(double dt);  // 프레임 간격을 평균 내고 vsync 간격에 맞춘다 (끊김 방지)
+  void RecordPerf(double dt, int steps, uint64_t renderStart, uint64_t presentStart);
+
+  struct PerfStats {
+    int frames = 0;
+    double time = 0.0, maxDt = 0.0, renderMs = 0.0, presentMs = 0.0;
+    int steps[3] = {0, 0, 0};  // 프레임당 로직 스텝 0 / 1 / 2 이상
+    long long drawCalls = 0;
+  };
+  PerfStats perf_;
 
   Graphics gfx_;
   Input input_;
@@ -59,6 +69,10 @@ class Game {
   bool pendingValid_ = false;
   uint64_t lastCounter_ = 0;
   double accumulator_ = 0.0;
+  static constexpr int kDtHistory = 4;
+  double dtHistory_[kDtHistory] = {};
+  int dtIndex_ = 0;
+  int refreshHz_ = 0;
 };
 
 }  // namespace gengar

@@ -23,6 +23,7 @@ void Apply(const std::string& key, const std::string& value) {
   else if (key == "god") g_options.god = Truthy(value);
   else if (key == "bot") g_options.bot = Truthy(value);
   else if (key == "log") g_options.log = Truthy(value);
+  else if (key == "perf") g_options.perf = Truthy(value);
   else if (key == "bosshp") g_options.bossHp = std::atoi(value.c_str());
   else if (key == "bossphase") g_options.bossPhase = std::max(0, std::min(2, std::atoi(value.c_str())));
   else if (key == "immortal") g_options.immortal = Truthy(value);

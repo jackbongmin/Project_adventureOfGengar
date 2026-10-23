@@ -16,6 +16,14 @@ bool Graphics::Init(const char* title, int w, int h) {
   window_ = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h,
                              SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
   if (!window_) return false;
+#ifdef _WIN32
+  // 기본값인 Direct3D 9 는 창 모드에서 vsync 가 60Hz 에 고정되지 않아 프레임 간격이 13~24ms 로 흔들렸다.
+  // 측정해 보니 OpenGL 이 가장 고르게 60Hz 를 지켰다 (Direct3D 11 은 가끔 33ms 프레임이 섞임).
+  // OpenGL 을 우선 쓰고(못 만들면 SDL 이 다른 드라이버로 넘어간다), 드라이버를 지정하면 꺼지는 배칭은 다시 켠다.
+  // 환경 변수 SDL_RENDER_DRIVER 를 주면 그쪽이 우선한다 (드라이버 비교용).
+  SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
+  SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1");
+#endif
   renderer_ = SDL_CreateRenderer(window_, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
   if (!renderer_) renderer_ = SDL_CreateRenderer(window_, -1, SDL_RENDERER_SOFTWARE);
   if (!renderer_) return false;
@@ -40,9 +48,21 @@ void Graphics::Begin(Color c) {
   ox_ = oy_ = 0.f;
   galpha_ = 1.f;
   xf_.clear();
+  drawCalls_ = 0;
 }
 
 void Graphics::End() { SDL_RenderPresent(renderer_); }
+
+const char* Graphics::RendererName() const {
+  SDL_RendererInfo info;
+  return renderer_ && SDL_GetRendererInfo(renderer_, &info) == 0 ? info.name : "?";
+}
+
+int Graphics::RefreshRate() const {
+  SDL_DisplayMode mode;
+  const int display = window_ ? SDL_GetWindowDisplayIndex(window_) : -1;
+  return display >= 0 && SDL_GetCurrentDisplayMode(display, &mode) == 0 ? mode.refresh_rate : 0;
+}
 
 void Graphics::PushTransform(Vec2 origin, float scale, int flipX) { xf_.push_back({origin, scale, flipX}); }
 void Graphics::PopTransform() { if (!xf_.empty()) xf_.pop_back(); }
@@ -63,6 +83,7 @@ void Graphics::Tris(const std::vector<Vec2>& pts, Color c) {
     verts[i].color = {c.r, c.g, c.b, c.a};
     verts[i].tex_coord = {0.f, 0.f};
   }
+  ++drawCalls_;
   SDL_RenderGeometry(renderer_, nullptr, verts.data(), static_cast<int>(verts.size()), nullptr, 0);
 }
 
@@ -74,6 +95,7 @@ void Graphics::FillRect(float x, float y, float w, float h, Color c) {
     const float x1 = std::round(x - ox_ + w), y1 = std::round(y - oy_ + h);
     SDL_FRect r{x0, y0, x1 - x0, y1 - y0};
     SDL_SetRenderDrawColor(renderer_, c.r, c.g, c.b, c.a);
+    ++drawCalls_;
     SDL_RenderFillRectF(renderer_, &r);
   } else {
     FillQuad({x, y}, {x + w, y}, {x + w, y + h}, {x, y + h}, c);
@@ -217,6 +239,7 @@ void Graphics::DrawSprite(SpriteId id, float x, float y, int scale, bool flipX, 
   if (!t) return;
   SDL_SetTextureAlphaMod(t, static_cast<Uint8>(Clamp(alpha * galpha_, 0.f, 1.f) * 255.f));
   const SDL_FRect dst{std::floor(x - ox_), std::floor(y - oy_), static_cast<float>(s.w * scale), static_cast<float>(s.h * scale)};
+  ++drawCalls_;
   SDL_RenderCopyExF(renderer_, t, nullptr, &dst, 0.0, nullptr, flipX ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
 }
 
@@ -226,6 +249,7 @@ void Graphics::DrawSpriteSized(SpriteId id, float x, float y, float w, float h, 
   if (!t) return;
   SDL_SetTextureAlphaMod(t, static_cast<Uint8>(Clamp(alpha * galpha_, 0.f, 1.f) * 255.f));
   const SDL_FRect dst{std::floor(x - ox_), std::floor(y - oy_), std::round(w), std::round(h)};
+  ++drawCalls_;
   SDL_RenderCopyExF(renderer_, t, nullptr, &dst, 0.0, nullptr, flipX ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
 }
 
