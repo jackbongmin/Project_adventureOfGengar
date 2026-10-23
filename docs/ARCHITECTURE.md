@@ -21,7 +21,7 @@ main -> Game ──(현재 하나)──> GameMode  (Title / Play / Shop / GameO
 ### State (state/) — 상태 머신
 `StateMachine<Owner>`는 현재 상태 객체 하나를 들고 있고, `Change()`는 현재 `Update`가 끝난 뒤 적용된다.
 - `state/boss/`: 보스의 행동. Enter -> Float -> 공격 패턴 -> Float ... -> Dying
-  - 평소(Float)에는 플레이어와 약 250px 거리를 두고 떠 있으며 몸통 접촉 피해가 없다. 몸으로 덮치는 기술(Dash 질주, Slam 낙하, Lunge 돌진) 중에만 접촉 피해가 생긴다.
+  - 평소(Float)에는 플레이어와 약 320px 거리를 두고 떠 있으며 몸통 접촉 피해가 없다. 몸으로 덮치는 기술(Dash 질주, Slam 낙하, Lunge 돌진) 중에만 접촉 피해가 생긴다.
   - 원거리: Volley(부채꼴), Ring(전방위), Spiral(회전 탄막), Homing(유도탄), Rain(위에서 낙하), Beam(광선), Pillar(바닥 기둥)
   - 예고 후 달려드는 기술: Lunge(조준선으로 위치 고정 후 돌진), Dash(반대편 벽에서 바닥 질주), Slam(내려찍기), Blink(순간이동 후 사격), Summon(소환)
 - `state/play/`: PlayMode의 진행 단계. Playing, Paused, PlayerDead, StageClear
@@ -50,9 +50,9 @@ main -> Game ──(현재 하나)──> GameMode  (Title / Play / Shop / GameO
 ### Data (data/) — 수치와 표
 - `PlayerStats.h`: 업그레이드 레벨 -> 능력치 수식 (공격력, 사거리, 연사, 점프 등)
 - `Upgrades.cpp`: 상점 항목 표
-- `BossPatterns.cpp`: 보스 단계별 패턴 순서표
+- `BossPatterns.cpp`: 보스 단계별 패턴 목록 (보스가 이 중에서 무작위로 고르며, 같은 패턴이 연속으로 나오지는 않는다)
 - `BossTuning.cpp`: 보스 단계별 난이도 표. 이동 속도, 공격 사이 쉬는 시간, 패턴별 탄 수/속도/예고 시간을 "1단계, 2단계, 3단계" 순으로 한 곳에서 조정한다.
-- 보스 체력: 기본 500(`cfg::kBossHp`)에 공격 업그레이드(위력/연사/다중 발사) 1레벨당 12%를 더한다(`stats::BossMaxHp`). 강화해도 패턴을 볼 새 없이 녹는 것을 막는다.
+- 보스 체력: 고정 320(`cfg::kBossHp`). 플레이어의 성장(업그레이드)에 따라 늘어나지 않는다(`stats::BossMaxHp`).
 - 상점의 "사면 어떻게 바뀌는지" 미리보기는 `Upgrades.cpp`의 `PreviewUpgrade`가 `PlayerStats` 수식으로 계산한다.
 - `core/Config.h`: 화면/타일/중력/보스 체력 등 전역 상수
 - `world/StageBuilder.cpp`: 스테이지 3개의 지형, 적, 아이템 배치

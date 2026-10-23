@@ -54,7 +54,12 @@ class FloatState : public BossStateBase {
     b.FloatMove();
     if (t_ > Tuning(b.Phase()).idleFrames) {
       const std::vector<BossAttack>& seq = AttackSequence(b.Phase());
-      b.StartAttack(seq[static_cast<size_t>(b.attackIndex++) % seq.size()]);
+      // 단계의 패턴 목록에서 무작위로 고른다. 직전과 같은 패턴이 연속으로 나오지는 않는다.
+      const int last = b.attackIndex, n = static_cast<int>(seq.size());
+      int pick = RandInt(0, n - 1);
+      if (n > 1 && pick == last) pick = (pick + 1 + RandInt(0, n - 2)) % n;
+      b.attackIndex = pick;
+      b.StartAttack(seq[static_cast<size_t>(pick)]);
     }
   }
 };
@@ -92,13 +97,21 @@ class RingState : public BossStateBase {
   void Update(Boss& b) override {
     ++t_;
     const BossTuning& T = Tuning(b.Phase());
-    constexpr int kFirst = 34, kGap = 30;
+    constexpr int kFirst = 34, kGap = 40;
+    constexpr float kRingGap = 0.5f;  // 플레이어 방향 ±0.5rad(약 ±29도)는 비운다
     b.FloatMove();
     b.charge = t_ < kFirst ? static_cast<float>(t_) / static_cast<float>(kFirst) : 0.f;
     if (t_ >= kFirst && (t_ - kFirst) % kGap == 0 && (t_ - kFirst) / kGap < T.ringWaves) {
       const int wave = (t_ - kFirst) / kGap;
       const float offset = wave % 2 == 0 ? 0.f : kPi / static_cast<float>(T.ringCount);
-      for (int i = 0; i < T.ringCount; ++i) b.FireOrb(b.pos, offset + static_cast<float>(i) * 2.f * kPi / static_cast<float>(T.ringCount), T.ringSpeed);
+      // 플레이어 쪽으로 한 군데 틈을 비워 둔다: 틈으로 빠져나가면 맞지 않는다
+      const Vec2 pc = b.PlayerCenter();
+      const float aim = std::atan2(pc.y - b.pos.y, pc.x - b.pos.x);
+      for (int i = 0; i < T.ringCount; ++i) {
+        const float a = offset + static_cast<float>(i) * 2.f * kPi / static_cast<float>(T.ringCount);
+        if (std::fabs(std::remainder(a - aim, 2.f * kPi)) < kRingGap) continue;
+        b.FireOrb(b.pos, a, T.ringSpeed);
+      }
       b.GetWorld().Snd().Play(Sfx::BossRoar);
     }
     if (t_ >= kFirst + (T.ringWaves - 1) * kGap + 36) b.ToFloat();
@@ -234,7 +247,7 @@ class PillarState : public BossStateBase {
     if (t_ >= kFirst && (t_ - kFirst) % kGap == 0 && (t_ - kFirst) / kGap < T.pillarWaves) {
       const float px = b.PlayerCenter().x;
       for (int i = 0; i < T.pillarCount; ++i) {
-        const float x = px + (static_cast<float>(i) - static_cast<float>(T.pillarCount - 1) / 2.f) * 90.f;
+        const float x = px + (static_cast<float>(i) - static_cast<float>(T.pillarCount - 1) / 2.f) * 150.f;  // 기둥 사이 간격: 사이로 지나갈 수 있게 넓게
         w.Spawn<PillarHazard>(Clamp(x, 50.f, kW - 50.f), T.pillarWarn);
       }
       w.Snd().Play(Sfx::PillarWarn);
@@ -363,7 +376,7 @@ class HomingState : public BossStateBase {
 };
 
 // 돌격: 기를 모으며 조준선으로 플레이어 위치를 고정해 보여 준 뒤(예고), 그 선을 따라 몸으로 달려든다.
-// 바닥에 닿으면 바닥을 따라 계속 질주하다가 멈추고, 그 뒤 잠시 빈틈이 생긴다(피해 1.5배).
+// 바닥에 닿으면 바닥을 따라 조금만(약 90px) 미끄러지다 멈추고, 그 뒤 잠시 빈틈이 생긴다(피해 1.5배).
 // 단계가 오를수록 예고가 짧고 빠르며, 연속 횟수가 늘어난다.
 class LungeState : public BossStateBase {
  public:
@@ -383,7 +396,7 @@ class LungeState : public BossStateBase {
         w.Snd().Play(Sfx::BeamCharge);
       }
       if (t_ >= T.lungeWindup) {
-        sub_ = 1; t_ = 0; traveled_ = 0.f; onFloor_ = false;
+        sub_ = 1; t_ = 0; traveled_ = 0.f; floorDist_ = 0.f; onFloor_ = false;
         b.charge = 0.f;
         b.beam.active = false;
         b.contactEnabled = true;  // 돌진 중에만 접촉 피해
@@ -392,15 +405,15 @@ class LungeState : public BossStateBase {
     } else if (sub_ == 1) {
       const float speed = T.lungeSpeed;
       float vx = std::cos(angle_) * speed, vy = std::sin(angle_) * speed;
-      if (onFloor_) { vx = (vx >= 0.f ? 1.f : -1.f) * speed; vy = 0.f; }  // 바닥을 따라 질주
+      if (onFloor_) { vx = (vx >= 0.f ? 1.f : -1.f) * speed; vy = 0.f; floorDist_ += speed; }  // 바닥을 따라 잠깐만 미끄러진다
       b.pos.x += vx;
       b.pos.y += vy;
       traveled_ += speed;
       if (t_ % 2 == 0) w.Fx().Burst(b.pos, 2, Hex(0xd9a0ff), 3.f, 14.f);
       w.Fx().Shake(2.f);
       if (b.pos.y + 52.f >= kGroundY) { b.pos.y = kGroundY - 52.f; onFloor_ = true; }
-      const bool wall = b.pos.x <= 100.f || b.pos.x >= kW - 100.f, ceiling = b.pos.y < 70.f, tooFar = traveled_ > 950.f;
-      if (wall || ceiling || tooFar) {
+      const bool wall = b.pos.x <= 100.f || b.pos.x >= kW - 100.f, ceiling = b.pos.y < 70.f, tooFar = traveled_ > 950.f, slid = floorDist_ > kMaxSlide;
+      if (wall || ceiling || tooFar || slid) {
         b.pos.x = Clamp(b.pos.x, 100.f, kW - 100.f);
         b.pos.y = std::max(b.pos.y, 70.f);
         sub_ = 2; t_ = 0;
@@ -416,7 +429,8 @@ class LungeState : public BossStateBase {
   }
 
  private:
-  float angle_ = 0.f, traveled_ = 0.f;
+  static constexpr float kMaxSlide = 90.f;  // 바닥에 닿은 뒤 더 미끄러지는 최대 거리(px)
+  float angle_ = 0.f, traveled_ = 0.f, floorDist_ = 0.f;
   bool onFloor_ = false;
 };
 

@@ -16,7 +16,7 @@ inline constexpr float kMaxFall = 12.0f;
 
 inline constexpr int kStageCount = 3;
 inline constexpr int kBossStage = 2;  // 마지막 스테이지 = 보스전
-inline constexpr int kBossHp = 500;  // 기본 체력. 공격 업그레이드를 많이 할수록 늘어난다 (stats::BossMaxHp)
+inline constexpr int kBossHp = 320;  // 보스 체력 (고정, stats::BossMaxHp)
 
 inline constexpr int kCrumbleFrames = 50;    // 밟고 약 0.8초 뒤 추락
 inline constexpr int kCrumbleRespawn = 200;  // 약 3.3초 뒤 복구

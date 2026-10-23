@@ -55,7 +55,7 @@ void Boss::StartAttack(BossAttack attack) {
 
 // 플레이어를 몸으로 쫓지 않고, 약 250px 거리를 둔 채 둥실 떠다닌다. 벽에 몰리면 반대편으로 넘어간다.
 void Boss::FloatMove() {
-  constexpr float kW = static_cast<float>(cfg::kScreenW), kKeepDistance = 230.f;
+  constexpr float kW = static_cast<float>(cfg::kScreenW), kKeepDistance = 320.f;
   const float pc = PlayerCenter().x, dx = pos.x - pc;
   if (std::fabs(dx) > 80.f) sideDir_ = dx > 0.f ? 1 : -1;
   float desired = pc + static_cast<float>(sideDir_) * kKeepDistance;

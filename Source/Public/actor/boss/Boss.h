@@ -54,7 +54,7 @@ class Boss : public Actor, public IDamageable {
   float alpha = 1.f;
   float charge = 0.f;            // 0~1 기 모으기 연출
   float damageMultiplier = 1.f;  // 내려찍기/돌진 후 빈틈에 1.5배
-  int attackIndex = 0;           // 패턴 시퀀스 진행 위치
+  int attackIndex = 0;           // 직전에 고른 패턴의 목록 위치 (연속 반복 방지용)
   bool holdingHat = true;        // 훔쳐 간 팬텀의 보물 모자를 오른손에 쥐고 있다
   float handReach = 0.f;         // 0~1: 오른손을 handTarget 쪽으로 뻗는 정도 (격파 후 모자를 돌려주는 연출)
   Vec2 handTarget;
