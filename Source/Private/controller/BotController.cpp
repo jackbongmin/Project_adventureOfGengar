@@ -18,6 +18,7 @@ void BotController::Think(Character& self, World& w, Intent& out) {
   out.shoot = !w.Sess().Has(CardId::ChargeShot) || w.Frame() % 160 != 0;  // 차지샷: 최대 단계(150프레임)까지 모았다가 떼서 발사
   out.jumpHeld = true;
   out.ultimate = w.Sess().gauge >= 100.f;
+  out.dash = w.Sess().Has(CardId::ShadowRush) && w.Frame() % 45 == 0;  // 그림자 돌진 검증용: 자주 대시
 
   const Boss* boss = w.GetBoss();
   if (boss && boss->IsAlive() && !boss->dying) {

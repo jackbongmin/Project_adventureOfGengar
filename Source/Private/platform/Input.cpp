@@ -23,6 +23,7 @@ const std::array<std::vector<SDL_Scancode>, static_cast<size_t>(Action::Count)>&
       {SDL_SCANCODE_G},                                              // Gallery (개발용 스프라이트 갤러리)
       {SDL_SCANCODE_C},                                              // Skip (시네마틱에서 꾹 누르면 건너뛰기)
       {SDL_SCANCODE_X, SDL_SCANCODE_LSHIFT},                         // Dash (왼쪽 Shift = 새끼손가락 대안)
+      {SDL_SCANCODE_R},                                              // Reroll (카드 다시 뽑기)
   }};
   return table;
 }

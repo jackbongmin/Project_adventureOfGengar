@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "actor/Player.h"
+#include "actor/projectile/PlayerSkills.h"
 #include "core/Config.h"
 #include "core/DebugOptions.h"
 #include "core/Session.h"
@@ -64,6 +65,8 @@ class CardPickPhase : public PlayPhase {
         return;
       case CardPicker::Result::Picked:
         ApplyCard(game.Sess(), picker_.Choice(), &world.GetPlayer());
+        // 그림자 분신은 스테이지 시작 때 만들어지므로, 스테이지 중에 얻으면 여기서 바로 불러낸다
+        if (picker_.Choice() == CardId::Familiar) world.Spawn<Familiar>(world.GetPlayer().Bounds().Center());
         break;
     }
     world.ConsumePick();
@@ -108,7 +111,9 @@ class PlayerDeadPhase : public PlayPhase {
 };
 
 class StageClearPhase : public PlayPhase {
-  static constexpr int kEnd = 210;  // 이 프레임이 지나면 상점으로
+  int closeAt_ = -1;  // 키를 누른 프레임 (-1 = 아직)
+  static constexpr int kArm = 80;    // 기록이 다 나온 뒤부터 키를 받는다
+  static constexpr int kClose = 24;  // 키를 누른 뒤 검게 닫히는 시간
 
  public:
   const char* Name() const override { return "StageClear"; }
@@ -116,7 +121,12 @@ class StageClearPhase : public PlayPhase {
   void Update(PlayMode& m) override {
     ++t_;
     m.GetWorld().UpdateEffects();
-    if (t_ > kEnd) m.GetGame().GoShop();
+    // 기록이 다 나온 뒤 키를 누르면 화면이 검게 닫히고 상점으로 (봇은 기다리지 않는다)
+    if (closeAt_ < 0 && t_ >= kArm && (m.GetGame().In().Pressed(Action::Confirm) || Debug().bot)) {
+      closeAt_ = t_;
+      m.GetGame().Snd().Play(Sfx::Select);
+    }
+    if (closeAt_ >= 0 && t_ > closeAt_ + kClose) m.GetGame().GoShop();
   }
   // 게임 화면과 확실히 갈리도록: 화면을 어둡게 덮고, 금색 테두리 띠가 가운데에서 펼쳐진 뒤
   // 제목 -> 스테이지 이름 -> 기록이 차례로 나오고, 끝에는 검게 닫히며 상점으로 넘어간다.
@@ -150,8 +160,8 @@ class StageClearPhase : public PlayPhase {
       g.Text(labels[i], x, 290.f, 2, Hex(0x9a88c0), Align::Center);
       g.Text(values[i], x, 316.f, 4, Hex(0xffffff), Align::Center);
     }
-    if (t_ >= 90 && (t_ / 15) % 2 == 0) g.Text("NEXT - SHOP", kW * 0.5f, 372.f, 2, Hex(0x7ae0ff), Align::Center);
-    if (t_ > kEnd - 30) g.FillRect(0, 0, kW, kH, Rgb(0, 0, 0, static_cast<int>(std::min(1.f, static_cast<float>(t_ - (kEnd - 30)) / 30.f) * 255)));
+    if (t_ >= kArm && closeAt_ < 0 && (t_ / 20) % 3 != 2) DrawKeyHints(g, {{{"Z"}, "CONTINUE TO SHOP"}}, kW * 0.5f, 362.f);
+    if (closeAt_ >= 0) g.FillRect(0, 0, kW, kH, Rgb(0, 0, 0, static_cast<int>(std::min(1.f, static_cast<float>(t_ - closeAt_) / static_cast<float>(kClose)) * 255)));
   }
 
  private:

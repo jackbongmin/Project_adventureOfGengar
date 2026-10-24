@@ -91,7 +91,7 @@ void DrawControls(Graphics& g) {
 
 void TitleMode::Update(Game& game) {
   ++frame_;
-  if ((Debug().bot || Debug().stompDemo > 0 || Debug().startPicks > 0) && frame_ > 30) { game.StartNewRun(); return; }  // bot=1 / stompdemo / pick 이면 시네마틱 없이 자동 시작
+  if ((Debug().bot || Debug().stompDemo > 0 || Debug().startPicks > 0 || Debug().startInShop) && frame_ > 30) { game.StartNewRun(); return; }  // bot=1 / stompdemo / pick / shop 이면 시네마틱 없이 자동 시작
   switch (screen_) {
     case Screen::Main: UpdateMain(game); break;
     case Screen::Stages: UpdateStages(game); break;

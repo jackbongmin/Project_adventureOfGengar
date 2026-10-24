@@ -19,8 +19,8 @@ using K = CardKind;
 // 기획서 카드 목록과 같은 순서 (CardId 순서)
 const std::vector<CardDef>& Table() {
   static const std::vector<CardDef> table = {
-      // 공격력: 등급마다 카드 수가 많아 한 장이 잘 안 나와서, 희귀로 올리고 비중 4 (한 칸에 나올 확률 약 2.8% -> 6.7%)
-      {CardId::AttackUp, "ATTACK UP", "DAMAGE +1", G::Rare, C::Attack, K::Stat, 5, 4},
+      // 공격력: 희귀, 비중 2. 비중 4였을 때 레벨업 화면 한 번에 나올 확률이 약 20%(희귀 칸의 4/19)라 너무 자주 보였다 -> 약 11%
+      {CardId::AttackUp, "ATTACK UP", "DAMAGE +1", G::Rare, C::Attack, K::Stat, 5, 2},
       {CardId::FireRate, "FIRE RATE", "SHOOT FASTER", G::Common, C::Attack, K::Stat, 4},
       {CardId::RangeUp, "RANGE UP", "SHOTS GO FARTHER", G::Common, C::Attack, K::Stat, 3},
       {CardId::ShotSpeed, "SHOT SPEED", "SHOTS FLY FASTER", G::Common, C::Attack, K::Stat, 2},

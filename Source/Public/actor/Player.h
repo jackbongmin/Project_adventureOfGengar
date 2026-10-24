@@ -44,6 +44,7 @@ class Player : public Character {
   void CastUltimate(World& world);
   void UpdateRain(World& world);
   void UpdateDashSkills(World& world);
+  void DrawRushSlash(Graphics& gfx, Vec2 center) const;  // 그림자 돌진 칼날 연출
   void CheckHazards(World& world);
   bool TryStartDash(World& world);  // 대시 칸이 남아 있고 공중 대시 횟수를 넘지 않았으면 시작
   bool LastStand(const World& world) const;

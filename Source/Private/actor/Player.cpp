@@ -26,6 +26,7 @@ namespace {
 constexpr int kDashFrames = 10;     // 약 0.17초 (속도는 stats::DashSpeed, 기본 약 110px)
 constexpr int kDashGap = 14;        // 대시 칸이 여러 개여도 이만큼은 떨어져야 다시 대시
 constexpr int kGhostLife = 12;
+constexpr float kRushReach = 22.f;  // 그림자 돌진: 몸 앞으로 더 베는 거리
 const Color kPhaseGreen = Hex(0x6fffa8);  // 무적 대시 중 유령빛
 // 차지샷: 오래 모을수록 단계가 오른다. 단계별 모으는 시간(프레임)과 피해·크기 배율
 constexpr int kChargeTiers = 4;
@@ -185,6 +186,7 @@ bool Player::TryStartDash(World& w) {
   dashGap_ = kDashGap;
   --charges_;
   if (!onGround_) ++airDashesUsed_;
+  DebugLog("[player] dash (frame %d, charges left %d)", w.Frame(), charges_);
   rushHits_.clear();
   if (s.Has(CardId::Afterimage)) w.SpawnPooled<DashBlast>(Vec2{Bounds().Center().x, Bounds().Center().y - 7.f}, facing_, stats::Damage(s) * 3.f, 56.f);
   squash_ = {1.4f, 0.75f};  // 옆으로 쭉 늘어난다
@@ -253,14 +255,16 @@ void Player::Shoot(World& w, int chargeTier) {
   w.Snd().Play(Sfx::Shoot);
 }
 
-// 그림자 돌진: 대시로 통과한 적을 한 번씩 벤다
+// 그림자 돌진: 대시로 통과한 적을 한 번씩 벤다. 앞에 그리는 칼날 연출만큼 판정도 앞으로 조금 넓힌다.
 void Player::UpdateDashSkills(World& w) {
   const Session& s = w.Sess();
   if (!s.Has(CardId::ShadowRush)) return;
   DamageInfo info{stats::Damage(s) * 2.f, dashDir_};
   info.fromPlayer = true;
   info.knockback = 3.f;
-  const Rect box = Bounds();
+  Rect box = Bounds();
+  if (dashDir_ < 0) box.x -= kRushReach;
+  box.w += kRushReach;
   auto slash = [&](Actor& a, bool boss) {
     if (std::find(rushHits_.begin(), rushHits_.end(), &a) != rushHits_.end() || !a.Bounds().Overlaps(box)) return;
     rushHits_.push_back(&a);
@@ -400,6 +404,31 @@ void Player::TakeDamage(World& w, const DamageInfo& info) {
   if (hp_ <= 0) Defeat(w);
 }
 
+// 그림자 돌진 연출: 몸 앞에 초승달 모양 칼날이 위에서 아래로 휘두르듯 펼쳐진다.
+// 도트 단위(3px)로 호를 찍고, 가운데는 흰색, 바깥은 보라. 대시가 끝나 갈수록 옅어진다.
+void Player::DrawRushSlash(Graphics& gfx, Vec2 c) const {
+  constexpr float kPx = 3.f;
+  const float k = 1.f - static_cast<float>(dashTimer_) / static_cast<float>(kDashFrames);  // 0 -> 1 (대시 진행)
+  const float sweep = std::min(1.f, k * 3.f + 0.4f);  // 호가 위에서 아래로 그려지는 정도 (대시 초반에 다 펼쳐진다)
+  const float alpha = dashTimer_ > 3 ? 1.f : static_cast<float>(dashTimer_) / 3.f;
+  const float dir = static_cast<float>(dashDir_);
+  const Vec2 o{c.x + dir * 6.f, c.y - 6.f};  // 호의 중심 (몸 살짝 앞)
+  constexpr float kR = 34.f, kHalf = 1.2f;   // 반지름, 위아래로 펼쳐지는 각도(rad)
+  const float a0 = -kHalf, a1 = -kHalf + 2.f * kHalf * sweep;
+  for (float a = a0; a <= a1; a += 0.09f) {
+    const float edge = 1.f - std::fabs(a) / kHalf;  // 가운데가 두껍고 끝이 가늘다
+    const float thick = 6.f + 12.f * edge;
+    for (float d = 0.f; d < thick; d += kPx) {
+      const float r = kR + kRushReach * 0.4f - d;
+      const float x = std::floor((o.x + dir * std::cos(a) * r) / kPx) * kPx, y = std::floor((o.y + std::sin(a) * r) / kPx) * kPx;
+      const Color col = d < kPx ? Rgb(255, 255, 255, static_cast<int>(240.f * alpha)) : d < kPx * 2.f ? Rgb(230, 204, 255, static_cast<int>(220.f * alpha))
+                                                                                           : Rgb(160, 90, 255, static_cast<int>(170.f * alpha));
+      gfx.FillRect(x, y, kPx, kPx, col);
+    }
+  }
+  gfx.Glow(o.x + dir * kR, o.y, 26.f, Rgb(200, 150, 255, static_cast<int>(90.f * alpha)));
+}
+
 void Player::Defeat(World& w) {
   if (defeated_) return;
   defeated_ = true;
@@ -440,6 +469,7 @@ void Player::Render(Graphics& gfx, const World& w) {
     gfx.PixelRing(c.x, c.y - 7.f, 22.f, 2.f, WithAlpha(kPhaseGreen, 0.6f), 2.f);
   }
   DrawPhantom(gfx, {c.x, c.y - 7.f}, facing_, static_cast<float>(animFrame_), 1.f, phasing ? 0.5f : 1.f, style);  // 스프라이트 발끝을 히트박스 바닥에 맞춘다
+  if (dashTimer_ > 0 && w.Sess().Has(CardId::ShadowRush)) DrawRushSlash(gfx, c);
   if (shield_) gfx.PixelRing(c.x, c.y - 4.f, 26.f + std::sin(static_cast<float>(animFrame_) * 0.1f) * 2.f, 2.f, Rgb(122, 224, 255, 140), 2.f);
 }
 

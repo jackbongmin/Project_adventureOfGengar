@@ -192,7 +192,7 @@ CardPicker::Result CardPicker::Update(Input& in, Audio& audio, bool bot) {
   }
   if (in.Pressed(Action::Left)) { cursor_ = (cursor_ + n - 1) % n; audio.Play(Sfx::Select); }
   if (in.Pressed(Action::Right)) { cursor_ = (cursor_ + 1) % n; audio.Play(Sfx::Select); }
-  if (in.Pressed(Action::Up)) {
+  if (in.Pressed(Action::Reroll)) {
     if (CanReroll()) { audio.Play(freeRerolls_ > 0 ? Sfx::Select : Sfx::Buy); return Result::Reroll; }
     if (rerollCost_ >= 0) audio.Tone(180.f, 120.f, 0.12f, Wave::Square, 0.05f);  // 코인이 모자람
   }
@@ -238,8 +238,8 @@ void CardPicker::Render(Graphics& g, const Session& s) const {
     if (freeRerolls_ > 0) reroll = "FREE REROLL (" + std::to_string(freeRerolls_) + ")";
     else if (coins_ >= rerollCost_) reroll = "REROLL  -" + std::to_string(rerollCost_) + " COINS";
     else reroll = "REROLL  NEED " + std::to_string(rerollCost_) + " COINS";
-    DrawKeyHints(g, {{{"LEFT", "RIGHT"}, "SELECT"}, {{"Z"}, "PICK"}, {{"UP"}, reroll.c_str()}}, kW * 0.5f, 470.f);
-    DrawCoinAmount(g, coins_, kW - 24.f, 96.f, 3, CanReroll() ? Hex(0xffe27a) : Hex(0xff6a8a), Align::Right);
+    DrawKeyHints(g, {{{"LEFT", "RIGHT"}, "SELECT"}, {{"Z"}, "PICK"}, {{"R"}, reroll.c_str()}}, kW * 0.5f, 470.f);
+    DrawCoinAmount(g, coins_, kW - 24.f, 462.f, 3, CanReroll() ? Hex(0xffe27a) : Hex(0xff6a8a), Align::Right);
   } else {
     DrawKeyHints(g, {{{"LEFT", "RIGHT"}, "SELECT"}, {{"Z"}, "PICK"}}, kW * 0.5f, 470.f);
   }

@@ -6,7 +6,7 @@ union SDL_Event;
 
 namespace gengar {
 
-enum class Action { Left, Right, Up, Down, Jump, Shoot, Ultimate, Confirm, Pause, Gallery, Skip, Dash, Count };
+enum class Action { Left, Right, Up, Down, Jump, Shoot, Ultimate, Confirm, Pause, Gallery, Skip, Dash, Reroll, Count };
 
 class Input {
  public:

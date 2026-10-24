@@ -70,21 +70,24 @@ void DrawCharacterPanel(Graphics& g, const Session& s, float x, float y, float w
       {CardId::DashCharge, "DASH", std::to_string(stats::DashCharges(s))},
       {CardId::GaugeUp, "GAUGE", "X" + Fmt1(stats::GaugeMultiplier(s))},
   };
+  // 줄마다 옅은 띠를 깔아 눈이 줄을 따라가게 하고, 카드로 올린 능력치는 초록 값으로 구분한다
   const float colW = (w - 40.f) * 0.5f;
   float ry = y + 92.f;
   for (int i = 0; i < 10; ++i) {
     const Row& r = rows[i];
     const float rx = x + 20.f + static_cast<float>(i % 2) * colW;
     if (i % 2 == 0 && i > 0) ry += 26.f;
+    if (i % 4 == 0) g.FillRect(x + 14.f, ry - 3.f, w - 28.f, 24.f, Rgb(255, 255, 255, 14));
+    const bool up = s.Card(r.icon) > 0;
     g.DrawSprite(art::A().cardIcon[static_cast<int>(r.icon)], rx, ry, 2);
-    g.Text(r.label, rx + 30.f, ry + 5.f, 2, Hex(0x9a82c0), Align::Left, false);
-    g.Text(r.value, rx + colW - 14.f, ry + 5.f, 2, Hex(0xffffff), Align::Right, false);
+    g.Text(r.label, rx + 30.f, ry + 5.f, 2, Hex(0xc9b0ee), Align::Left, false);
+    g.Text(r.value, rx + colW - 14.f, ry + 5.f, 2, up ? Hex(0x6fe08a) : Hex(0xffffff), Align::Right, false);
   }
   ry += 30.f;
 
   // 장착 필살기
   g.DrawSprite(art::A().cardIcon[static_cast<int>(UltIcon(s.prog.ult))], x + 20.f, ry, 2);
-  g.Text("ULT", x + 50.f, ry + 5.f, 2, Hex(0x9a82c0), Align::Left, false);
+  g.Text("ULT", x + 50.f, ry + 5.f, 2, Hex(0xc9b0ee), Align::Left, false);
   g.Text(UltName(s.prog.ult), x + w - 34.f, ry + 5.f, 2, Hex(0xffe27a), Align::Right, false);
   ry += 30.f;
 
@@ -93,7 +96,7 @@ void DrawCharacterPanel(Graphics& g, const Session& s, float x, float y, float w
   ry += 12.f;
   g.Text("SKILLS", x + 20.f, ry, 2, Hex(0xd9b8ff));
   ry += 22.f;
-  constexpr float kSlot = 32.f, kGap = 4.f;
+  constexpr float kSlot = 36.f, kGap = 6.f;
   const int perRow = static_cast<int>((w - 40.f + kGap) / (kSlot + kGap));
   int n = 0;
   for (const CardDef& d : AllCards()) {
