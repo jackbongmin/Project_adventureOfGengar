@@ -66,7 +66,9 @@ web/shell.html  웹 빌드용 페이지 틀
 scripts/        빌드 스크립트
 tools/spritegen 도트 스프라이트 생성기 (Node)
 tools/icongen   exe 아이콘 생성기: 보물 모자 도트로 res/windows/gengar.ico 를 만든다 (Python + Pillow)
+tools/fontgen   한글 글리프 굽기: 번역에 쓰인 한글만 갈무리7 BDF 에서 뽑아 HangulGlyphs.cpp 로 (Python)
 res/windows     exe 아이콘과 리소스 파일
+res/fonts       한글 글리프 원본 폰트(갈무리)의 라이선스
 prototype-html/ 처음 만든 HTML 프로토타입 (참고용)
 docs/           설계 문서
 ```
@@ -129,7 +131,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build_win.ps1            # vcpk
 
 - 형식은 `MAJOR.MINOR.PATCH`. 정식 출시 전에는 MAJOR가 0이다.
 - 기능(스테이지, 적, 메뉴 등)이 늘면 MINOR를 올리고 PATCH는 0으로, 버그 수정·밸런스 조정만 있으면 PATCH를 올린다.
-- 현재 `v0.4.8 BETA` (0.2.0: 로그라이크 카드 시스템, 0.2.1: 카드 연출·설명과 보스 밸런스 조정, 0.2.2: 저주탄 조정, 0.2.3: 분열·튕김·차지샷 재설계와 보스전 발판, 0.3.0: 코인 다시 뽑기·스테이지 클리어 화면·바닥 기둥 높이, 0.3.1: 상점 화면 정리와 카드 버그 수정, 0.4.0: Tab 능력치 창, 스테이지 1·2 개편, 0.4.1: 정예 스킬·두꺼비·결투장 제한 시간, 보스 체력 900, 0.4.2: 피해 10단위·새 카드 10종·카드 외형, 0.4.3: 상점 카드 강화·뽑기 가격 상승·확률/체력 조정, 0.4.4: 전설 확률·뽑기 가격 상한, 0.4.5: 웨이브 공 수정·확률 재조정·강화 화면 정리, 0.4.6: 분신 0.8초 주기·뽑기 가격 누적, 0.4.7: 그림자 날개·사거리 표시 정리, 0.4.8: 부메랑 반복 피해 수정·폭발탄 범위 확대). 첫 정식 출시 때 `1.0.0`.
+- 현재 `v0.5.0 BETA` (0.2.0: 로그라이크 카드 시스템, 0.2.1: 카드 연출·설명과 보스 밸런스 조정, 0.2.2: 저주탄 조정, 0.2.3: 분열·튕김·차지샷 재설계와 보스전 발판, 0.3.0: 코인 다시 뽑기·스테이지 클리어 화면·바닥 기둥 높이, 0.3.1: 상점 화면 정리와 카드 버그 수정, 0.4.0: Tab 능력치 창, 스테이지 1·2 개편, 0.4.1: 정예 스킬·두꺼비·결투장 제한 시간, 보스 체력 900, 0.4.2: 피해 10단위·새 카드 10종·카드 외형, 0.4.3: 상점 카드 강화·뽑기 가격 상승·확률/체력 조정, 0.4.4: 전설 확률·뽑기 가격 상한, 0.4.5: 웨이브 공 수정·확률 재조정·강화 화면 정리, 0.4.6: 분신 0.8초 주기·뽑기 가격 누적, 0.4.7: 그림자 날개·사거리 표시 정리, 0.4.8: 부메랑 반복 피해 수정·폭발탄 범위 확대, 0.5.0: 설정에 언어(English / 한국어) 추가와 한글 패치). 첫 정식 출시 때 `1.0.0`.
 
 ## 검증용 디버그 옵션
 
@@ -149,9 +151,17 @@ powershell -ExecutionPolicy Bypass -File scripts\build_win.ps1            # vcpk
 | `bossphase=0~2` `bosshp=N` `immortal=1` | 보스전 검증: 시작 단계 / 체력 / 불사 |
 | `heartdemo=1` | 시작 지점에 하트 추가 |
 | `heightdemo=1` | 플레이어를 위 발판에 올리고 아래에 추적 중인 늑대를 배치 (추적 포기 검증, 타이틀에서 Enter) |
+| `lang=ko` | 한국어로 시작 (설정 > 언어와 같다). `log=1` 과 함께 쓰면 번역이 빠진 영어 문장을 `[locale] no korean` 으로 출력 |
 | `stompdemo=N` | 가만히 선 늑대 머리 위에서 떨어뜨림. N(1~32)만큼 시작 높이를 1px씩 바꿈 (밟기 판정 검증, 자동 시작) |
 
 예: `index.html?bot=1&god=1&log=1&speed=8` 은 처음부터 엔딩까지 자동으로 진행한다. 웹 빌드는 로그를 `window.__logs`에도 모아 둔다.
+
+## 언어 (한국어)
+
+설정 > 언어에서 English / 한국어를 고른다. 게임 코드는 영어 문장을 그대로 쓰고, 한국어일 때 `Graphics::Text` 가 [LocaleKo.cpp](Source/Private/core/LocaleKo.cpp) 의 표로 바꿔 그린다 (숫자가 든 문장은 `STAGE #` 처럼 숫자 자리를 `#` 로 적는다).
+번역에 한글을 새로 넣었으면 `python tools/fontgen/gen_hangul.py <Galmuri7.bdf>` 로 글리프를 다시 굽는다.
+구조와 동작 방식은 [docs/LOCALIZATION.md](docs/LOCALIZATION.md) 참고.
+한글 글리프는 [갈무리(Galmuri)](https://github.com/quiple/galmuri) 7 (Copyright (c) 2019–2025 Lee Minseo, SIL Open Font License 1.1, [res/fonts/Galmuri-LICENSE.txt](res/fonts/Galmuri-LICENSE.txt))에서 가져왔다.
 
 ## 현재 상태
 

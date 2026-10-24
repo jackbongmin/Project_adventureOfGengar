@@ -26,6 +26,8 @@ const char* JumpHint(JumpControl j) {
                                       : "TAP = VERY LOW JUMP, HOLD = HIGH JUMP";
 }
 const char* ShakeName(int s) { return s == 0 ? "OFF" : s == 1 ? "LOW" : "FULL"; }
+// 언어 이름은 번역하지 않고 각 언어로 적는다 ("ENGLISH" 는 번역표에 없어서 그대로 나온다)
+const char* LanguageName(int l) { return l == static_cast<int>(Language::Korean) ? "한국어" : "ENGLISH"; }
 
 // 네 모서리를 도트 하나(p)만큼 깎은 사각형
 void NotchedRect(Graphics& g, float x, float y, float w, float h, float p, Color c) {
@@ -39,7 +41,7 @@ void DrawMenuRow(Graphics& g, const std::string& text, float x, float y, bool se
   g.Text(text, x, y, 3, selected ? Hex(0xffe27a) : idle, Align::Center);
   if (selected) {
     const float bob = std::floor(std::sin(static_cast<float>(frame) * 0.2f) * 3.f);
-    const float half = static_cast<float>(text.size()) * 9.f + 26.f;  // scale 3 글자 폭(약 18px)의 절반
+    const float half = static_cast<float>(g.TextWidth(text, 3)) * 0.5f + 26.f;
     g.Text(">", x - half + bob, y, 3, Hex(0xffe27a), Align::Center);
     g.Text("<", x + half - bob, y, 3, Hex(0xffe27a), Align::Center);
   }
@@ -130,6 +132,7 @@ bool UpdateSettingsMenu(Game& game, int& cursor) {
       break;
     case kSettingShake: s.shake = Wrap(s.shake + dir, 3); game.Snd().Play(Sfx::Select); break;
     case kSettingJump: s.jump = static_cast<JumpControl>(Wrap(static_cast<int>(s.jump) + dir, 3)); game.Snd().Play(Sfx::Jump); break;
+    case kSettingLanguage: s.language = static_cast<Language>(Wrap(static_cast<int>(s.language) + dir, 2)); game.Snd().Play(Sfx::Select); break;
     case kSettingBack:
       if (in.Pressed(Action::Confirm)) { game.Snd().Play(Sfx::Select); return true; }
       break;
@@ -138,11 +141,11 @@ bool UpdateSettingsMenu(Game& game, int& cursor) {
 }
 
 void DrawSettingsMenu(Graphics& g, int cursor, int frame, float x, float y, float w, float hintY) {
-  constexpr float kRowH = 44.f, kStep = 52.f;
+  constexpr float kRowH = 40.f, kStep = 46.f;
   const Settings& s = Prefs();
   const float right = x + w - 40.f;  // 값의 오른쪽 끝 (그 밖은 ">" 화살표 자리)
   const float bob = std::floor(std::sin(static_cast<float>(frame) * 0.2f) * 2.f);
-  const char* labels[kSettingCount] = {"VOLUME", "SCREEN SHAKE", "JUMP", "BACK"};
+  const char* labels[kSettingCount] = {"VOLUME", "SCREEN SHAKE", "JUMP", "LANGUAGE", "BACK"};
 
   for (int i = 0; i < kSettingCount; ++i) {
     const float ry = y + static_cast<float>(i) * kStep + (i == kSettingBack ? 12.f : 0.f);
@@ -150,23 +153,26 @@ void DrawSettingsMenu(Graphics& g, int cursor, int frame, float x, float y, floa
     // 줄 배경: 선택한 줄만 밝은 테두리
     NotchedRect(g, x, ry, w, kRowH, 2.f, sel ? Hex(0xc58bff) : Hex(0x2e1452));
     NotchedRect(g, x + 2.f, ry + 2.f, w - 4.f, kRowH - 4.f, 2.f, sel ? Hex(0x3a1a66) : Hex(0x1c0a34));
-    g.Text(labels[i], x + 18.f, ry + 12.f, 3, sel ? Hex(0xffe27a) : Hex(0xffffff));
+    g.Text(labels[i], x + 18.f, ry + 10.f, 3, sel ? Hex(0xffe27a) : Hex(0xffffff));
 
     // 값: 바꿀 수 있는 줄은 선택했을 때 좌우 화살표를 보여 준다
     float left = right;  // 값이 시작되는 x (화살표 위치용)
-    const float vy = ry + 9.f;
+    const float vy = ry + 7.f;
     if (i == kSettingVolume) {
       for (int k = 9; k >= 0; --k) {  // 칸 막대: 채운 칸 = 크기
         left -= 14.f;
         g.FillRect(left, vy, 12.f, 26.f, Hex(0x12061f));
         g.FillRect(left + 2.f, vy + 2.f, 8.f, 22.f, k < s.volume ? Lerp(Hex(0x9a5cff), Hex(0xffe27a), static_cast<float>(k) / 9.f) : Hex(0x2e1452));
       }
-    } else if (i == kSettingShake) {
-      for (int k = 2; k >= 0; --k) {  // OFF / LOW / FULL 중 고른 칸만 채운다
-        const char* name = ShakeName(k);
+    } else if (i == kSettingShake || i == kSettingLanguage) {
+      // 고를 수 있는 값을 나란히 놓고 고른 칸만 채운다 (OFF / LOW / FULL, ENGLISH / 한국어)
+      const bool shake = i == kSettingShake;
+      const int count = shake ? 3 : 2, chosen = shake ? s.shake : static_cast<int>(s.language);
+      for (int k = count - 1; k >= 0; --k) {
+        const char* name = shake ? ShakeName(k) : LanguageName(k);
         const float sw = static_cast<float>(g.TextWidth(name, 2)) + 16.f;
         left -= sw;
-        const bool on = k == s.shake;
+        const bool on = k == chosen;
         NotchedRect(g, left, vy, sw, 26.f, 2.f, on ? Hex(0xffe27a) : Hex(0x12061f));
         if (!on) NotchedRect(g, left + 2.f, vy + 2.f, sw - 4.f, 22.f, 2.f, Hex(0x1c0a34));
         g.Text(name, left + sw * 0.5f, vy + 6.f, 2, on ? Hex(0x2a1048) : Hex(0x8a74b0), Align::Center, false);
@@ -176,19 +182,20 @@ void DrawSettingsMenu(Graphics& g, int cursor, int frame, float x, float y, floa
     } else if (i == kSettingJump) {
       const char* name = JumpName(s.jump);
       left -= static_cast<float>(g.TextWidth(name, 3));
-      g.Text(name, left, ry + 12.f, 3, Hex(0x7ae0ff));
+      g.Text(name, left, ry + 10.f, 3, Hex(0x7ae0ff));
     }
     if (sel && i != kSettingBack) {
-      g.Text("<", left - 22.f - bob, ry + 12.f, 3, Hex(0xffe27a), Align::Center);
-      g.Text(">", right + 20.f + bob, ry + 12.f, 3, Hex(0xffe27a), Align::Center);
+      g.Text("<", left - 22.f - bob, ry + 10.f, 3, Hex(0xffe27a), Align::Center);
+      g.Text(">", right + 20.f + bob, ry + 10.f, 3, Hex(0xffe27a), Align::Center);
     }
   }
 
   // 고른 항목 설명
-  const char* hint = cursor == kSettingVolume ? "SOUND EFFECT VOLUME"
-                     : cursor == kSettingShake ? "HOW MUCH THE SCREEN SHAKES ON BIG HITS"
-                     : cursor == kSettingJump  ? JumpHint(s.jump)
-                                               : "BACK TO THE MENU";
+  const char* hint = cursor == kSettingVolume     ? "SOUND EFFECT VOLUME"
+                     : cursor == kSettingShake    ? "HOW MUCH THE SCREEN SHAKES ON BIG HITS"
+                     : cursor == kSettingJump     ? JumpHint(s.jump)
+                     : cursor == kSettingLanguage ? "TEXT LANGUAGE"
+                                                  : "BACK TO THE MENU";
   g.Text(hint, x + w * 0.5f, hintY, 2, Hex(0xc9b0ee), Align::Center, false);
 }
 

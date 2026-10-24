@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/Config.h"
+#include "core/Locale.h"
 #include "core/Game.h"
 #include "core/Session.h"
 #include "data/Cards.h"
@@ -28,23 +29,6 @@ constexpr float kPanelX = 440.f, kPanelY = 64.f, kPanelW = 496.f, kPanelH = 440.
 constexpr float kGridX = kPanelX + 20.f, kGridY = kPanelY + 52.f;
 constexpr float kDetailY = kPanelY + kPanelH - 168.f;  // 설명 칸 윗변 (설명 4줄까지)
 constexpr float kGap = 8.f;
-
-// 공백 기준으로 maxChars 글자 안에 들어가게 줄을 나눈다
-std::vector<std::string> WrapText(const std::string& text, size_t maxChars) {
-  std::vector<std::string> lines;
-  std::string line;
-  size_t i = 0;
-  while (i < text.size()) {
-    const size_t sp = text.find(' ', i);
-    const std::string word = text.substr(i, sp == std::string::npos ? std::string::npos : sp - i);
-    if (!line.empty() && line.size() + 1 + word.size() > maxChars) { lines.push_back(line); line.clear(); }
-    line += (line.empty() ? "" : " ") + word;
-    if (sp == std::string::npos) break;
-    i = sp + 1;
-  }
-  if (!line.empty()) lines.push_back(line);
-  return lines;
-}
 
 class StatusPhase : public PlayPhase {
  public:
@@ -125,7 +109,7 @@ class StatusPhase : public PlayPhase {
       g.Text(GradeName(d.grade), x, y + 34.f, 2, GradeColor(d.grade), Align::Left, false);
       g.Text(CategoryName(d.category), gx, y + 34.f, 2, CategoryColor(d.category), Align::Left, false);
       float ly = y + 58.f;
-      for (const std::string& line : WrapText(CardDetail(id), 37)) {
+      for (const std::string& line : WrapLocalized(CardDetail(id), 37)) {
         g.Text(line, x, ly, 2, Hex(0xe6d6ff), Align::Left, false);
         ly += 19.f;
       }

@@ -9,6 +9,7 @@
 #include "art/Art.h"
 #include "core/Config.h"
 #include "core/Game.h"
+#include "core/Locale.h"
 #include "core/Session.h"
 #include "platform/Audio.h"
 #include "platform/Graphics.h"
@@ -72,7 +73,7 @@ void VictoryMode::Update(Game& game) {
   const int beat = BeatAt(kBeats, kBeatCount, t_);
   if (beat >= 0 && t_ % 4 == 0) {
     const int typed = (t_ - kBeats[beat].start) / 2;
-    if (typed < static_cast<int>(std::strlen(kBeats[beat].text))) snd.Tone(900.f, 900.f, 0.025f, Wave::Square, 0.02f);
+    if (typed < static_cast<int>(CharCount(Localize(kBeats[beat].text)))) snd.Tone(900.f, 900.f, 0.025f, Wave::Square, 0.02f);
   }
 }
 

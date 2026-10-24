@@ -9,6 +9,7 @@
 //   cards : 시작할 때 카드 지급 (예: cards=homing,split,attackup,attackup  같은 이름을 여러 번 = 여러 단계)
 //   pick=N: 스테이지를 시작하자마자 카드 고르기 N번 (카드 화면 검증용)
 //   shop  : 시작하자마자 상점 화면   heartdemo / hp=N : 하트 규칙 검증용   heightdemo : 늑대 추적 포기 검증용
+//   lang=ko : 한국어로 시작 (설정의 언어를 바꾼 것과 같다)
 #include <string>
 
 namespace gengar {

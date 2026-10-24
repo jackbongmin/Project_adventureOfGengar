@@ -70,9 +70,11 @@ class Graphics {
   void PixelRing(float cx, float cy, float r, float thickness, Color c, float grid = 2.f);
 
   // 픽셀 폰트 텍스트. y는 글자 윗변. scale = 픽셀 배율(글자 높이 = 7*scale)
+  // 설정 언어가 한국어면 영어 문장을 번역해서 그린다 (core/Locale). UTF-8 한글도 그대로 받는다.
   void Text(const std::string& s, float x, float y, int scale, Color c, Align align = Align::Left,
             bool outline = true);
-  int TextWidth(const std::string& s, int scale) const;
+  int TextWidth(const std::string& s, int scale) const;  // 번역한 뒤의 폭
+  static int RawTextWidth(const std::string& s, int scale);  // 번역하지 않고 그대로 잰 폭
 
  private:
   struct Xf {

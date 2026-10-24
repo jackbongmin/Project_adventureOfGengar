@@ -31,7 +31,7 @@ const Item kMain[kMainCount] = {
     {"BOSS BATTLE", "SHOP WITH 150 COINS, THEN FIGHT VOIDMAW"},
     {"STAGE SELECT", "PRACTICE A STAGE WITH ITS USUAL UPGRADES"},
     {"CONTROLS", "KEYS AND HOW TO PLAY"},
-    {"SETTINGS", "VOLUME, SCREEN SHAKE, JUMP"},
+    {"SETTINGS", "VOLUME, SCREEN SHAKE, JUMP, LANGUAGE"},
     {"SPRITE GALLERY", "BROWSE ALL PIXEL SPRITES"},
     {"QUIT", "CLOSE THE GAME"},
 };
@@ -187,8 +187,8 @@ void TitleMode::Render(Graphics& g) {
     g.Text("COLLECT COINS, BUY UPGRADES IN THE SHOP, BEAT THE VOID LORD", W * 0.5f, 470, 2, Hex(0x9a82c0), Align::Center);
     DrawKeyHints(g, {{{"ENTER"}, "BACK"}}, W * 0.5f, 500.f);
   } else {
-    DrawPixelPanel(g, 150.f, 116.f, 660.f, 300.f);
-    DrawSettingsMenu(g, cursor_, frame_, 174.f, 138.f, 612.f, 382.f);
+    DrawPixelPanel(g, 150.f, 116.f, 660.f, 312.f);
+    DrawSettingsMenu(g, cursor_, frame_, 174.f, 138.f, 612.f, 392.f);
     DrawKeyHints(g, {{{"UP", "DOWN"}, "SELECT"}, {{"LEFT", "RIGHT"}, "CHANGE"}, {{"ESC"}, "BACK"}}, W * 0.5f, 500.f);
   }
 }

@@ -28,7 +28,7 @@ struct Item {
 const Item kItems[kPauseCount] = {
     {"RESUME", "BACK TO THE ADVENTURE"},
     {"RESTART", "TRY THIS STAGE AGAIN FROM THE START"},
-    {"SETTINGS", "VOLUME, SCREEN SHAKE, JUMP"},
+    {"SETTINGS", "VOLUME, SCREEN SHAKE, JUMP, LANGUAGE"},
     {"MAIN MENU", "END THIS RUN AND RETURN TO THE TITLE"},
 };
 
@@ -138,7 +138,7 @@ class PausedPhase : public PlayPhase {
     DrawPixelPanel(g, 150.f, 64.f, 660.f, 420.f);
     Title(g, "SETTINGS", 92.f, 5);
     Divider(g, 146.f, 580.f);
-    DrawSettingsMenu(g, cursor_, frame_, 174.f, 164.f, 612.f, 400.f);
+    DrawSettingsMenu(g, cursor_, frame_, 174.f, 164.f, 612.f, 412.f);
     DrawKeyHints(g, {{{"UP", "DOWN"}, "SELECT"}, {{"LEFT", "RIGHT"}, "CHANGE"}, {{"ESC"}, "BACK"}}, kCx, 434.f);
   }
 

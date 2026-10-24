@@ -8,6 +8,7 @@
 
 #include "art/Art.h"
 #include "core/Config.h"
+#include "core/Locale.h"
 #include "core/DebugOptions.h"
 #include "core/Game.h"
 #include "data/Cards.h"
@@ -29,23 +30,6 @@ void Box(Graphics& g, float x, float y, float w, float h, Color fill, Color edge
   g.FillRect(x + 2.f, y, w - 4.f, h, edge);
   g.FillRect(x, y + 2.f, w, h - 4.f, edge);
   g.FillRect(x + 2.f, y + 2.f, w - 4.f, h - 4.f, fill);
-}
-
-// 공백 기준으로 maxChars 글자 안에 들어가게 줄을 나눈다
-std::vector<std::string> WrapText(const std::string& text, size_t maxChars) {
-  std::vector<std::string> lines;
-  std::string line;
-  size_t i = 0;
-  while (i < text.size()) {
-    const size_t sp = text.find(' ', i);
-    const std::string word = text.substr(i, sp == std::string::npos ? std::string::npos : sp - i);
-    if (!line.empty() && line.size() + 1 + word.size() > maxChars) { lines.push_back(line); line.clear(); }
-    line += (line.empty() ? "" : " ") + word;
-    if (sp == std::string::npos) break;
-    i = sp + 1;
-  }
-  if (!line.empty()) lines.push_back(line);
-  return lines;
 }
 
 // 위쪽 화살표 도트 (강화 칸 아이콘)
@@ -344,7 +328,7 @@ void ShopMode::RenderUpgrade(Graphics& g, const Session& s) const {
   const float dy = listY + kRowH * kRows + 12.f;
   g.FillRect(px + 16.f, dy - 6.f, pw - 32.f, 2.f, Hex(0x5a2a9a));
   float ly = dy + 4.f;
-  for (const std::string& line : WrapText(CardDetail(id), 66)) {
+  for (const std::string& line : WrapLocalized(CardDetail(id), 66)) {
     g.Text(line, px + 24.f, ly, 2, Hex(0xe6d6ff), Align::Left, false);
     ly += 18.f;
   }

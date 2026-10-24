@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/Locale.h"
 #include "platform/PixelFont.h"
 
 namespace gengar {
@@ -274,34 +275,53 @@ void Graphics::PixelRing(float cx, float cy, float r, float thickness, Color c, 
   }
 }
 
-int Graphics::TextWidth(const std::string& s, int scale) const {
+int Graphics::TextWidth(const std::string& s, int scale) const { return RawTextWidth(Localize(s), scale); }
+
+int Graphics::RawTextWidth(const std::string& s, int scale) {
   if (s.empty()) return 0;
-  return static_cast<int>(s.size()) * (kGlyphW + 1) * scale - scale;
+  int w = 0;
+  for (size_t i = 0; i < s.size();) w += GlyphAdvance(NextCodepoint(s, i));
+  return w * scale - scale;
 }
 
 void Graphics::TextRaw(const std::string& s, float x, float y, int scale, Color c) {
   float cx = x;
   const float sc = static_cast<float>(scale);
-  for (char ch : s) {
-    const char* const* g = PixelGlyph(ch);
-    if (g) {
+  for (size_t i = 0; i < s.size();) {
+    const uint32_t cp = NextCodepoint(s, i);
+    if (cp < 0x80) {
+      if (const char* const* g = PixelGlyph(static_cast<char>(cp))) {
+        for (int row = 0; row < kGlyphH; ++row) {
+          int col = 0;
+          while (col < kGlyphW) {
+            if (g[row][col] != '#') { ++col; continue; }
+            int run = 1;
+            while (col + run < kGlyphW && g[row][col + run] == '#') ++run;
+            FillRect(cx + static_cast<float>(col) * sc, y + static_cast<float>(row) * sc, static_cast<float>(run) * sc, sc, c);
+            col += run;
+          }
+        }
+      }
+    } else if (const uint8_t* g = HangulGlyph(cp)) {
       for (int row = 0; row < kGlyphH; ++row) {
         int col = 0;
-        while (col < kGlyphW) {
-          if (g[row][col] != '#') { ++col; continue; }
+        while (col < kHangulAdvance) {
+          if (!(g[row] & (0x80 >> col))) { ++col; continue; }
           int run = 1;
-          while (col + run < kGlyphW && g[row][col + run] == '#') ++run;
+          while (col + run < kHangulAdvance && (g[row] & (0x80 >> (col + run)))) ++run;
           FillRect(cx + static_cast<float>(col) * sc, y + static_cast<float>(row) * sc, static_cast<float>(run) * sc, sc, c);
           col += run;
         }
       }
     }
-    cx += static_cast<float>(kGlyphW + 1) * sc;
+    cx += static_cast<float>(GlyphAdvance(cp)) * sc;
   }
 }
 
-void Graphics::Text(const std::string& s, float x, float y, int scale, Color c, Align align, bool outline) {
-  const float w = static_cast<float>(TextWidth(s, scale));
+// 한국어를 고르면 여기서 한 번 번역한다 (core/Locale). 번역 결과로 폭을 재고 그린다.
+void Graphics::Text(const std::string& source, float x, float y, int scale, Color c, Align align, bool outline) {
+  const std::string s = Localize(source);
+  const float w = static_cast<float>(RawTextWidth(s, scale));
   if (align == Align::Center) x -= w * 0.5f;
   else if (align == Align::Right) x -= w;
   if (outline) {

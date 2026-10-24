@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <string>
 
+#include "core/Settings.h"
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
@@ -34,6 +36,7 @@ void Apply(const std::string& key, const std::string& value) {
   else if (key == "hp") g_options.startHp = std::atoi(value.c_str());
   else if (key == "cards") g_options.cards = value;
   else if (key == "pick") g_options.startPicks = value.empty() ? 1 : std::atoi(value.c_str());
+  else if (key == "lang") Prefs().language = value == "ko" ? Language::Korean : Language::English;
 }
 
 // "a=1&b=2" 또는 "--a=1" 한 토큰을 key/value로 나눈다.

@@ -6,6 +6,7 @@
 
 #include "art/Art.h"
 #include "core/Config.h"
+#include "core/Locale.h"
 #include "platform/Audio.h"
 #include "platform/Graphics.h"
 #include "platform/Input.h"
@@ -20,23 +21,6 @@ constexpr float kW = static_cast<float>(cfg::kScreenW);
 void Box(Graphics& g, float x, float y, float w, float h, float p, Color c) {
   g.FillRect(x + p, y, w - 2.f * p, h, c);
   g.FillRect(x, y + p, w, h - 2.f * p, c);
-}
-
-// 공백 기준으로 maxChars 글자 안에 들어가게 줄을 나눈다
-std::vector<std::string> Wrap(const std::string& text, size_t maxChars) {
-  std::vector<std::string> lines;
-  std::string line;
-  size_t i = 0;
-  while (i < text.size()) {
-    const size_t sp = text.find(' ', i);
-    const std::string word = text.substr(i, sp == std::string::npos ? std::string::npos : sp - i);
-    if (!line.empty() && line.size() + 1 + word.size() > maxChars) { lines.push_back(line); line.clear(); }
-    line += (line.empty() ? "" : " ") + word;
-    if (sp == std::string::npos) break;
-    i = sp + 1;
-  }
-  if (!line.empty()) lines.push_back(line);
-  return lines;
 }
 
 // 테두리 둘레 위의 점 (0~1) -> 좌표. 영웅 카드의 도는 빛에 쓴다.
@@ -120,7 +104,7 @@ void DrawCard(Graphics& g, const CardDef& def, const Session& s, float x, float 
 
   // 이름 (길면 두 줄)
   const size_t nameChars = static_cast<size_t>((w - 16.f) / 12.f);
-  const std::vector<std::string> name = Wrap(def.name, nameChars);
+  const std::vector<std::string> name = WrapLocalized(def.name, nameChars);
   float ty = y + 122.f;
   for (const std::string& line : name) { g.Text(line, cx, ty, 2, Hex(0xffffff), Align::Center); ty += 18.f; }
 
@@ -132,7 +116,7 @@ void DrawCard(Graphics& g, const CardDef& def, const Session& s, float x, float 
   ty += 30.f;
 
   // 효과 설명
-  for (const std::string& line : Wrap(def.desc, static_cast<size_t>((w - 20.f) / 12.f))) {
+  for (const std::string& line : WrapLocalized(def.desc, static_cast<size_t>((w - 20.f) / 12.f))) {
     g.Text(line, cx, ty, 2, Hex(0xc9b0ee), Align::Center, false);
     ty += 18.f;
   }

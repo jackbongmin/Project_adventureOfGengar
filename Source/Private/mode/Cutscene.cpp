@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "core/Config.h"
+#include "core/Locale.h"
 #include "platform/Graphics.h"
 #include "platform/Input.h"
 
@@ -41,8 +42,9 @@ int BeatAt(const CutsceneBeat* beats, int count, int t) {
 
 void DrawDialog(Graphics& g, const CutsceneBeat& beat, int t, int blinkT) {
   if (beat.text == nullptr || beat.text[0] == '\0') return;
-  const std::string full = beat.text;
-  const int shown = std::clamp((t - beat.start) / kFramesPerChar, 0, static_cast<int>(full.size()));
+  const std::string full = Localize(beat.text);  // 한 글자씩 보여 주므로 번역을 먼저 한다
+  const int total = static_cast<int>(CharCount(full));
+  const int shown = std::clamp((t - beat.start) / kFramesPerChar, 0, total);
   constexpr float x = 60.f, y = kH - 112.f, w = kW - 120.f, h = 80.f;
   g.FillRect(x, y, w, h, Rgb(14, 4, 32, 225));
   g.FillRect(x, y, w, 4, Hex(0xa47af0));
@@ -54,13 +56,13 @@ void DrawDialog(Graphics& g, const CutsceneBeat& beat, int t, int blinkT) {
     g.Text(beat.speaker, x + 26.f, y - 12.f, 2, Hex(0xffe27a), Align::Left, false);
   }
   // 줄바꿈 문자로 최대 두 줄
-  const std::string visible = full.substr(0, static_cast<size_t>(shown));
+  const std::string visible = FirstChars(full, static_cast<size_t>(shown));
   const size_t nl = visible.find('\n');
   const bool twoLines = full.find('\n') != std::string::npos;
   const float ty = twoLines ? y + 16.f : y + 30.f;
   g.Text(visible.substr(0, nl), x + 24.f, ty, 3, Hex(0xffffff));
   if (nl != std::string::npos) g.Text(visible.substr(nl + 1), x + 24.f, ty + 30.f, 3, Hex(0xffffff));
-  if (shown == static_cast<int>(full.size()) && ((blinkT < 0 ? t : blinkT) / 20) % 2 == 0) g.FillRect(x + w - 30.f, y + h - 22.f, 10, 6, Hex(0xffe27a));
+  if (shown == total &&((blinkT < 0 ? t : blinkT) / 20) % 2 == 0) g.FillRect(x + w - 30.f, y + h - 22.f, 10, 6, Hex(0xffe27a));
 }
 
 void DrawLetterbox(Graphics& g, float amount) {

@@ -83,4 +83,15 @@ const char* const* PixelGlyph(char c) {
   return table[u]->rows;
 }
 
+uint32_t NextCodepoint(const std::string& s, size_t& i) {
+  const unsigned char b = static_cast<unsigned char>(s[i]);
+  int extra = b >= 0xF0 ? 3 : b >= 0xE0 ? 2 : b >= 0xC0 ? 1 : 0;
+  if (b >= 0x80 && b < 0xC0) extra = 0;  // 이어지는 바이트로 시작하면 깨진 글자: 한 바이트만
+  if (i + static_cast<size_t>(extra) >= s.size()) extra = 0;  // 글자 중간에서 문자열이 끝남
+  uint32_t cp = extra == 0 ? b : static_cast<uint32_t>(b & (0x3F >> extra));
+  for (int k = 1; k <= extra; ++k) cp = (cp << 6) | (static_cast<unsigned char>(s[i + static_cast<size_t>(k)]) & 0x3F);
+  i += static_cast<size_t>(extra) + 1;
+  return cp;
+}
+
 }  // namespace gengar

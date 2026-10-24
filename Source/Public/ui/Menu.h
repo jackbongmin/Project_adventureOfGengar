@@ -31,12 +31,12 @@ float DrawCoinAmount(Graphics& g, int amount, float x, float y, int scale, Color
 // 화면 오른쪽 아래에 게임 버전. Game::Frame 이 모든 화면 위에 그린다.
 void DrawVersion(Graphics& g);
 
-// ---- 설정 화면 (효과음 크기 / 화면 흔들림 / 점프 방식 / BACK) ----
-enum SettingItem { kSettingVolume, kSettingShake, kSettingJump, kSettingBack, kSettingCount };
+// ---- 설정 화면 (효과음 크기 / 화면 흔들림 / 점프 방식 / 언어 / BACK) ----
+enum SettingItem { kSettingVolume, kSettingShake, kSettingJump, kSettingLanguage, kSettingBack, kSettingCount };
 
 // 커서 이동과 값 변경을 처리한다. ESC 또는 BACK 을 고르면 true.
 bool UpdateSettingsMenu(Game& game, int& cursor);
-// 항목 줄들을 (x, y) 부터 폭 w 로 그리고(약 216px 높이), 고른 항목의 설명을 hintY 에 쓴다.
+// 항목 줄들을 (x, y) 부터 폭 w 로 그리고(약 236px 높이), 고른 항목의 설명을 hintY 에 쓴다.
 void DrawSettingsMenu(Graphics& g, int cursor, int frame, float x, float y, float w, float hintY);
 
 }  // namespace gengar

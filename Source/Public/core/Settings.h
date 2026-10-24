@@ -4,11 +4,13 @@
 namespace gengar {
 
 enum class JumpControl { Fixed, Variable, ShortTap };  // 항상 최대 높이 / 짧게=낮게·꾹=높게 / 짧게 누르면 아주 낮게
+enum class Language { English, Korean };  // 화면 글자 언어 (core/Locale 이 번역한다)
 
 struct Settings {
   int volume = 7;                            // 효과음 크기 0~10
   int shake = 2;                             // 화면 흔들림 0 끄기 / 1 약하게 / 2 기본
   JumpControl jump = JumpControl::Variable;  // 점프 방식
+  Language language = Language::English;
 };
 
 Settings& Prefs();

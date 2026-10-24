@@ -8,6 +8,7 @@
 #include "art/Art.h"
 #include "core/Config.h"
 #include "core/DebugOptions.h"
+#include "core/Locale.h"
 #include "core/Game.h"
 #include "platform/Audio.h"
 #include "platform/Graphics.h"
@@ -94,7 +95,7 @@ void IntroMode::Update(Game& game) {
     const int beat = BeatAt(kBeats, kBeatCount, t_);
     if (beat >= 0) {
       const CutsceneBeat& b = kBeats[beat];
-      const int typedAt = b.start + kFramesPerChar * static_cast<int>(std::strlen(b.text));
+      const int typedAt = b.start + kFramesPerChar * static_cast<int>(CharCount(Localize(b.text)));
       // 글자가 아직 나오는 중이면 먼저 전부 보여 주고, 다 보인 뒤에 누르면 다음 장면으로
       t_ = (t_ < typedAt) ? std::min(typedAt, b.end - 1) : b.end;
     }
@@ -116,7 +117,7 @@ void IntroMode::Update(Game& game) {
   const int beat = BeatAt(kBeats, kBeatCount, t_);
   if (beat >= 0 && t_ % 4 == 0) {
     const int typed = (t_ - kBeats[beat].start) / 2;
-    if (typed < static_cast<int>(std::strlen(kBeats[beat].text))) snd.Tone(900.f, 900.f, 0.025f, Wave::Square, 0.02f);
+    if (typed < static_cast<int>(CharCount(Localize(kBeats[beat].text)))) snd.Tone(900.f, 900.f, 0.025f, Wave::Square, 0.02f);
   }
 }
 
