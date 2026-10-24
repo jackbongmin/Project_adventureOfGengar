@@ -14,7 +14,7 @@
 namespace gengar {
 namespace {
 
-constexpr float kBurstRadius = 40.f;
+constexpr float kBurstRadius = 64.f;
 constexpr float kHomingRange = 320.f;
 constexpr float kHomingTurn = 0.11f;  // 프레임당 최대로 꺾는 각도 (라디안)
 constexpr float kSplitSpread = 0.9f;  // 분열 조각 사이 각도 (라디안)
@@ -40,7 +40,9 @@ ShadowBall::ShadowBall(Vec2 center, Vec2 velocity, const ShotSpec& spec, const A
   if (ignore) hits_[hitCount_++] = ignore;
 }
 
+// 맞힌 목록이 꽉 차면 더 맞히지 않는다 (기록 못 한 적을 매 프레임 다시 때리는 일 방지)
 bool ShadowBall::AlreadyHit(const Actor* a) const {
+  if (hitCount_ >= kMaxHits) return true;
   for (int i = 0; i < hitCount_; ++i) {
     if (hits_[i] == a) return true;
   }
@@ -81,6 +83,7 @@ void ShadowBall::Split(World& w, Vec2 at, Vec2 dir, const Actor* ignore) {
   frag.bounces = bouncy_ ? 1 : 0;
   frag.fragment = true;
   frag.charged = false;
+  frag.boomerang = false;  // 조각까지 돌아오면 같은 적을 몇 번이고 다시 맞힌다
   const float base = std::atan2(dir.y, dir.x), speed = std::max(6.f, std::hypot(dir.x, dir.y));
   for (int k = -1; k <= 1; ++k) {
     const float a = base + static_cast<float>(k) * kSplitSpread;
@@ -122,8 +125,12 @@ void ShadowBall::Hit(World& w, Actor& target) {
       splash.amount *= spec_.bossScale;
       boss->TakeDamage(w, splash);
     }
-    w.Fx().AddRing(pos, kBurstRadius);
-    w.Fx().Burst(pos, 14, Hex(0xffb347), 4.f, 18.f);
+    // 주황 고리가 폭발 범위 끝까지 퍼지고, 안쪽에 노란 고리와 불꽃이 함께 튄다
+    w.Fx().AddRing(pos, kBurstRadius, Hex(0xffb347));
+    w.Fx().AddRing(pos, kBurstRadius * 0.6f, Hex(0xffe27a));
+    w.Fx().Burst(pos, 24, Hex(0xffb347), 5.5f, 22.f);
+    w.Fx().Burst(pos, 10, Hex(0xfff0b0), 3.f, 14.f);
+    w.Fx().Shake(1.5f);
   }
   // 분열: 일반 적은 건너뛰고 주변으로 퍼지고, 보스는 커다란 몸이라 조각 셋을 모두 맞는다
   Split(w, pos, vel, target.Kind() == ActorKind::Boss ? nullptr : &target);
@@ -154,11 +161,12 @@ void ShadowBall::Zap(World& w, const Actor& from, float damage) {
   else static_cast<Enemy&>(*best).TakeDamage(w, info);
 }
 
-// 튕김 한 번을 쓰고, 조금 뒤에는 이미 맞힌 적(보스 포함)도 다시 맞힐 수 있게 한다
+// 튕김 한 번을 쓰고, 조금 뒤에는 이미 맞힌 적(보스 포함)도 다시 맞힐 수 있게 한다.
+// 돌아오는 부메랑은 예외: 돌아오는 길에는 대상마다 딱 한 번만 맞힌다
 void ShadowBall::UseBounce() {
   --spec_.bounces;
   life_ = std::max(life_, 30);
-  rehit_ = kRehitDelay;
+  if (!returning_) rehit_ = kRehitDelay;
 }
 
 void ShadowBall::Update(World& w) {
@@ -176,10 +184,10 @@ void ShadowBall::Update(World& w) {
     waveShift_ = perp * (flip * std::sin(static_cast<float>(age_) * 0.3f) * 16.f);
     pos += waveShift_ - prevShift;
   }
-  if (spec_.boomerang) {  // 부메랑: 사거리 절반에서 돌아서 플레이어에게 날아온다. 돌아오는 길에는 다시 맞힐 수 있다
+  if (spec_.boomerang) {  // 부메랑: 사거리 절반에서 돌아서 플레이어에게 날아온다. 돌아오는 길에 한 번 더 맞힐 수 있다
     const Vec2 pc = w.GetPlayer().Bounds().Center();
     const float sp = std::max(4.f, std::hypot(vel.x, vel.y));
-    if (!returning_ && life_ <= spec_.life / 2) { returning_ = true; hitCount_ = 0; life_ = std::max(life_, 90); }
+    if (!returning_ && life_ <= spec_.life / 2) { returning_ = true; hitCount_ = 0; rehit_ = 0; life_ = std::max(life_, 90); }
     if (returning_) {
       const Vec2 to = pc - pos;
       const float d = std::max(1.f, std::hypot(to.x, to.y));
