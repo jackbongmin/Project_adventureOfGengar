@@ -106,6 +106,9 @@ class World {
   void ConsumePick() { if (pendingPicks_ > 0) --pendingPicks_; }
   int RerollsLeft() const { return rerollsLeft_; }
   void UseReroll() { if (rerollsLeft_ > 0) --rerollsLeft_; }
+  // 코인 다시 뽑기: 15코인에서 시작해 이번 스테이지에서 낼 때마다 10씩 비싸진다
+  int RerollCost() const { return 15 + 10 * paidRerolls_; }
+  void PayReroll() { ++paidRerolls_; }
   void OnEnemyKilled();           // 영혼 흡수 카드: 12마리마다 하트 1
   int LevelUpFlash() const { return levelUpFlash_; }  // HUD 의 경험치 바가 번쩍이는 연출
 
@@ -161,7 +164,8 @@ class World {
   int bannerTimer_ = 0;
   float xpFrac_ = 0.f;     // 경험치 증가 카드의 소수점 경험치
   int pendingPicks_ = 0;   // 아직 고르지 않은 카드 화면 수
-  int rerollsLeft_ = 0;    // 이번 스테이지에 남은 다시 뽑기
+  int rerollsLeft_ = 0;    // 이번 스테이지에 남은 무료 다시 뽑기 (리롤 카드)
+  int paidRerolls_ = 0;    // 이번 스테이지에 코인을 내고 다시 뽑은 수
   int kills_ = 0;          // 영혼 흡수 카운트
   int levelUpFlash_ = 0;
   int timeStop_ = 0;

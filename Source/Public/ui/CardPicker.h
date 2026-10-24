@@ -17,10 +17,13 @@ class CardPicker {
  public:
   enum class Result { None, Picked, Reroll };
 
-  void Open(std::vector<CardId> offer, std::string title, int rerolls);
+  // freeRerolls = 남은 무료 다시 뽑기(리롤 카드). rerollCost >= 0 이면 무료가 없을 때 코인을 내고 다시 뽑을 수 있다
+  // (coins = 지금 가진 코인). rerollCost < 0 이면 코인 다시 뽑기 없음 (상점).
+  void Open(std::vector<CardId> offer, std::string title, int freeRerolls, int rerollCost = -1, int coins = 0);
   // bot = 자동 플레이: 잠시 뒤 등급이 가장 높은 카드를 고른다.
   Result Update(Input& in, Audio& audio, bool bot);
   CardId Choice() const { return offer_.empty() ? CardId::Count : offer_[static_cast<size_t>(cursor_)]; }
+  bool CanReroll() const { return freeRerolls_ > 0 || (rerollCost_ >= 0 && coins_ >= rerollCost_); }
   bool Empty() const { return offer_.empty(); }
   void Render(Graphics& g, const Session& s) const;
 
@@ -29,7 +32,9 @@ class CardPicker {
 
   std::vector<CardId> offer_;
   std::string title_;
-  int rerolls_ = 0;
+  int freeRerolls_ = 0;
+  int rerollCost_ = -1;
+  int coins_ = 0;
   int cursor_ = 0;
   int t_ = 0;
 };

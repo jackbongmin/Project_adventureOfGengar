@@ -159,10 +159,12 @@ void DrawCard(Graphics& g, const CardDef& def, const Session& s, float x, float 
   }
 }
 
-void CardPicker::Open(std::vector<CardId> offer, std::string title, int rerolls) {
+void CardPicker::Open(std::vector<CardId> offer, std::string title, int freeRerolls, int rerollCost, int coins) {
   offer_ = std::move(offer);
   title_ = std::move(title);
-  rerolls_ = rerolls;
+  freeRerolls_ = freeRerolls;
+  rerollCost_ = rerollCost;
+  coins_ = coins;
   cursor_ = 0;
   t_ = 0;
 }
@@ -190,7 +192,10 @@ CardPicker::Result CardPicker::Update(Input& in, Audio& audio, bool bot) {
   }
   if (in.Pressed(Action::Left)) { cursor_ = (cursor_ + n - 1) % n; audio.Play(Sfx::Select); }
   if (in.Pressed(Action::Right)) { cursor_ = (cursor_ + 1) % n; audio.Play(Sfx::Select); }
-  if (in.Pressed(Action::Up) && rerolls_ > 0) { audio.Play(Sfx::Select); return Result::Reroll; }
+  if (in.Pressed(Action::Up)) {
+    if (CanReroll()) { audio.Play(freeRerolls_ > 0 ? Sfx::Select : Sfx::Buy); return Result::Reroll; }
+    if (rerollCost_ >= 0) audio.Tone(180.f, 120.f, 0.12f, Wave::Square, 0.05f);  // 코인이 모자람
+  }
   if (in.Pressed(Action::Confirm)) { audio.Play(Sfx::Buy); return Result::Picked; }
   return Result::None;
 }
@@ -227,10 +232,14 @@ void CardPicker::Render(Graphics& g, const Session& s) const {
   }
 
   if (t_ < kArmFrames) return;
-  if (rerolls_ > 0) {
+  if (freeRerolls_ > 0 || rerollCost_ >= 0) {
+    // 무료(리롤 카드)가 남아 있으면 먼저 쓰고, 없으면 코인을 낸다. 코인이 모자라면 필요한 만큼 붉게 보여 준다.
     static std::string reroll;
-    reroll = "REROLL (" + std::to_string(rerolls_) + ")";
+    if (freeRerolls_ > 0) reroll = "FREE REROLL (" + std::to_string(freeRerolls_) + ")";
+    else if (coins_ >= rerollCost_) reroll = "REROLL  -" + std::to_string(rerollCost_) + " COINS";
+    else reroll = "REROLL  NEED " + std::to_string(rerollCost_) + " COINS";
     DrawKeyHints(g, {{{"LEFT", "RIGHT"}, "SELECT"}, {{"Z"}, "PICK"}, {{"UP"}, reroll.c_str()}}, kW * 0.5f, 470.f);
+    DrawCoinAmount(g, coins_, kW - 24.f, 96.f, 3, CanReroll() ? Hex(0xffe27a) : Hex(0xff6a8a), Align::Right);
   } else {
     DrawKeyHints(g, {{{"LEFT", "RIGHT"}, "SELECT"}, {{"Z"}, "PICK"}}, kW * 0.5f, 470.f);
   }

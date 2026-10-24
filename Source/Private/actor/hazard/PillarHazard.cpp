@@ -10,6 +10,7 @@ namespace gengar {
 
 namespace {
 constexpr float kGroundY = static_cast<float>(cfg::kGroundRow * cfg::kTile);
+constexpr float kHeight = kGroundY;  // 바닥에서 화면 맨 위까지 (점프나 높은 발판으로는 못 피한다)
 }
 
 PillarHazard::PillarHazard(float centerX, int warnFrames) : Actor(ActorKind::Hazard), warn_(warnFrames) {

@@ -70,7 +70,7 @@ const std::vector<CardDef>& Table() {
       {CardId::ComboKeep, "COMBO KEEP", "COMBO LASTS LONGER", G::Common, C::Utility, K::Special, 1},
       {CardId::Greed, "GREED", "MORE COINS", G::Rare, C::Utility, K::Stat, 2},
       {CardId::Luck, "LUCK", "BETTER CARDS MORE OFTEN", G::Rare, C::Utility, K::Stat, 3},
-      {CardId::Reroll, "REROLL", "REROLL CARDS ONCE A STAGE", G::Epic, C::Utility, K::SpecialStack, 2},
+      {CardId::Reroll, "REROLL", "1 FREE REROLL EACH STAGE", G::Epic, C::Utility, K::SpecialStack, 2},
       {CardId::LastStand, "LAST STAND", "STRONGER AT 1 HEART", G::Epic, C::Utility, K::Special, 1},
       {CardId::MoreChoice, "MORE CHOICE", "LEVEL UP SHOWS 4 CARDS", G::Epic, C::Utility, K::Special, 1},
       {CardId::Familiar, "FAMILIAR", "MINI GHOST SHOOTS WITH YOU", G::Legend, C::Utility, K::Special, 1},

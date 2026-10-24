@@ -13,7 +13,6 @@ class PillarHazard : public Actor {
 
  private:
   static constexpr int kActiveFrames = 22;
-  static constexpr float kHeight = 190.f;
   int warn_;
   int t_ = 0;
 };

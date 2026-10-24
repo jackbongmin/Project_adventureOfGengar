@@ -16,6 +16,7 @@
 #include "platform/Audio.h"
 #include "platform/Input.h"
 #include "ui/CardPicker.h"
+#include "ui/Menu.h"
 
 namespace gengar {
 namespace {
@@ -52,7 +53,13 @@ class CardPickPhase : public PlayPhase {
     switch (picker_.Update(game.In(), game.Snd(), Debug().bot)) {
       case CardPicker::Result::None: return;
       case CardPicker::Result::Reroll:
-        world.UseReroll();
+        if (world.RerollsLeft() > 0) {
+          world.UseReroll();  // 리롤 카드: 무료
+        } else {
+          game.Sess().coins -= world.RerollCost();
+          DebugLog("[card] paid reroll -%d (coins left %d)", world.RerollCost(), game.Sess().coins);
+          world.PayReroll();
+        }
         Deal(m);
         return;
       case CardPicker::Result::Picked:
@@ -76,7 +83,7 @@ class CardPickPhase : public PlayPhase {
     std::vector<CardId> offer = DrawOffer(s, ctx, OfferSize(s));
     if (offer.empty()) { world.ConsumePick(); m.Phase().Change(MakePlayingPhase()); return; }  // 얻을 카드가 하나도 남지 않음
     const bool boss = world.StageIndex() == cfg::kBossStage;
-    picker_.Open(std::move(offer), boss ? "PHASE BONUS!" : "LEVEL UP!  LV " + std::to_string(s.prog.level), world.RerollsLeft());
+    picker_.Open(std::move(offer), boss ? "PHASE BONUS!" : "LEVEL UP!  LV " + std::to_string(s.prog.level), world.RerollsLeft(), world.RerollCost(), s.coins);
   }
 
   CardPicker picker_;
@@ -101,17 +108,50 @@ class PlayerDeadPhase : public PlayPhase {
 };
 
 class StageClearPhase : public PlayPhase {
+  static constexpr int kEnd = 210;  // 이 프레임이 지나면 상점으로
+
  public:
   const char* Name() const override { return "StageClear"; }
   void Enter(PlayMode& m) override { DebugLog("[play] STAGE CLEAR (score %d, frame %d)", m.GetGame().Sess().score, m.GetWorld().Frame()); }
   void Update(PlayMode& m) override {
     ++t_;
     m.GetWorld().UpdateEffects();
-    if (t_ > 170) m.GetGame().GoShop();
+    if (t_ > kEnd) m.GetGame().GoShop();
   }
-  void Render(PlayMode&, Graphics& g) override {
-    g.FillRect(0, 0, kW, kH, Rgb(10, 0, 25, 115));
-    g.Text("STAGE CLEAR!", kW * 0.5f, 215, 8, Hex(0xffe27a), Align::Center);
+  // 게임 화면과 확실히 갈리도록: 화면을 어둡게 덮고, 금색 테두리 띠가 가운데에서 펼쳐진 뒤
+  // 제목 -> 스테이지 이름 -> 기록이 차례로 나오고, 끝에는 검게 닫히며 상점으로 넘어간다.
+  void Render(PlayMode& m, Graphics& g) override {
+    const Session& s = m.GetGame().Sess();
+    const World& w = m.GetWorld();
+    const Color gold = Hex(0xffe27a);
+    g.FillRect(0, 0, kW, kH, Rgb(6, 0, 16, static_cast<int>(std::min(1.f, static_cast<float>(t_) / 20.f) * 200.f)));
+
+    constexpr float kTop = 140.f, kBottom = 400.f;
+    const float open = std::min(1.f, static_cast<float>(t_) / 14.f);  // 띠가 가운데에서 위아래로 열린다
+    const float mid = (kTop + kBottom) * 0.5f, half = (kBottom - kTop) * 0.5f * open;
+    g.FillRect(0, mid - half, kW, half * 2.f, Rgb(24, 8, 48, 245));
+    g.FillRect(0, mid - half - 6.f, kW, 4, gold);
+    g.FillRect(0, mid + half + 2.f, kW, 4, gold);
+    if (t_ < 14) return;
+
+    const int pop = t_ < 26 ? 4 + (t_ - 14) / 3 : 8;  // 살짝 튀어나오는 제목
+    g.Text("STAGE CLEAR!", kW * 0.5f + 5.f, 175.f + 5.f, pop, Rgb(0, 0, 0, 160), Align::Center);
+    g.Text("STAGE CLEAR!", kW * 0.5f, 175.f, pop, gold, Align::Center);
+    if (t_ >= 30) g.Text(w.GetLevel().Name(), kW * 0.5f, 252.f, 2, Hex(0xc9b0ee), Align::Center);
+
+    // 기록: 점수 / 코인 / 레벨 / 걸린 시간을 하나씩 띄운다
+    const int secs = w.Frame() / 60;
+    const std::string time = std::to_string(secs / 60) + ":" + (secs % 60 < 10 ? "0" : "") + std::to_string(secs % 60);
+    const std::string labels[4] = {"SCORE", "COINS", "LEVEL", "TIME"};
+    const std::string values[4] = {std::to_string(s.score), std::to_string(s.coins), std::to_string(s.prog.level), time};
+    for (int i = 0; i < 4; ++i) {
+      if (t_ < 44 + i * 8) break;
+      const float x = kW * 0.5f + (static_cast<float>(i) - 1.5f) * 190.f;
+      g.Text(labels[i], x, 290.f, 2, Hex(0x9a88c0), Align::Center);
+      g.Text(values[i], x, 316.f, 4, Hex(0xffffff), Align::Center);
+    }
+    if (t_ >= 90 && (t_ / 15) % 2 == 0) g.Text("NEXT - SHOP", kW * 0.5f, 372.f, 2, Hex(0x7ae0ff), Align::Center);
+    if (t_ > kEnd - 30) g.FillRect(0, 0, kW, kH, Rgb(0, 0, 0, static_cast<int>(std::min(1.f, static_cast<float>(t_ - (kEnd - 30)) / 30.f) * 255)));
   }
 
  private:
