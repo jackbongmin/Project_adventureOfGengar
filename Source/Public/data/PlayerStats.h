@@ -29,7 +29,10 @@ inline int ShotLife(const Session& s) {
 inline float ShotRadius(const Session& s) { return 7.f + std::min(4.f, Lv(s, CardId::AttackUp)) * 1.8f; }
 inline float CritChance(const Session& s) { return 0.15f * Lv(s, CardId::Critical); }
 inline int Pierce(const Session& s) { return s.Card(CardId::Pierce); }
-inline int Bounces(const Session& s) { return s.Card(CardId::Bounce); }
+// 튕기는 탄: 단계마다 튕김 2 -> 3. 벽·바닥과 적 모두에서 튕기고, 사거리가 1.6배.
+// 닫힌 보스방에서는 튕긴 공이 보스를 여러 번 맞히므로 횟수를 적게 둔다 (3/5번일 때 보스 피해가 약 4배였다).
+inline int Bounces(const Session& s) { return s.Has(CardId::Bounce) ? 1 + s.Card(CardId::Bounce) : 0; }
+inline float BounceLifeScale(const Session& s) { return s.Has(CardId::Bounce) ? 1.6f : 1.f; }
 inline float Knockback(const Session& s) { return 2.5f * Lv(s, CardId::Knockback); }  // 넉백 속도 (px/프레임)
 
 // ---- 방어 ----

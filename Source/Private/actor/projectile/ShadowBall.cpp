@@ -16,6 +16,9 @@ namespace {
 constexpr float kBurstRadius = 40.f;
 constexpr float kHomingRange = 320.f;
 constexpr float kHomingTurn = 0.11f;  // 프레임당 최대로 꺾는 각도 (라디안)
+constexpr float kSplitSpread = 0.9f;  // 분열 조각 사이 각도 (라디안)
+constexpr int kFragmentLife = 48;     // 분열 조각 수명 (약 380px)
+constexpr int kRehitDelay = 18;       // 튕긴 뒤 이만큼(보스 몸을 빠져나갈 시간) 지나면 이미 맞힌 적도 다시 맞힐 수 있다
 
 bool Hittable(const Actor& a) {
   if (a.Kind() == ActorKind::Boss) {
@@ -28,7 +31,7 @@ bool Hittable(const Actor& a) {
 }  // namespace
 
 ShadowBall::ShadowBall(Vec2 center, Vec2 velocity, const ShotSpec& spec, const Actor* ignore)
-    : Actor(ActorKind::PlayerShot), spec_(spec), life_(spec.life) {
+    : Actor(ActorKind::PlayerShot), spec_(spec), life_(spec.life), bouncy_(spec.bounces > 0) {
   pos = center;
   origin_ = center;
   vel = velocity;
@@ -62,6 +65,26 @@ void ShadowBall::Steer(World& w) {
   float diff = std::remainder(want - cur, 2.f * kPi);
   diff = Clamp(diff, -kHomingTurn, kHomingTurn);
   vel = {std::cos(cur + diff) * speed, std::sin(cur + diff) * speed};
+}
+
+// 분열: dir 방향을 가운데로 세 갈래. 공 하나당 한 번만 (적에게 맞거나 벽에 닿을 때).
+// 튕기는 탄이 있으면 조각도 한 번 튕긴다. ignore 로 넘긴 적은 조각이 맞히지 않는다.
+void ShadowBall::Split(World& w, Vec2 at, Vec2 dir, const Actor* ignore) {
+  if (!spec_.split || spec_.fragment || splitDone_) return;
+  splitDone_ = true;
+  ShotSpec frag = spec_;
+  frag.radius = std::max(4.f, spec_.radius * 0.55f);
+  frag.damage = spec_.damage * 0.4f;
+  frag.life = kFragmentLife;
+  frag.pierce = 0;
+  frag.bounces = bouncy_ ? 1 : 0;
+  frag.fragment = true;
+  frag.charged = false;
+  const float base = std::atan2(dir.y, dir.x), speed = std::max(6.f, std::hypot(dir.x, dir.y));
+  for (int k = -1; k <= 1; ++k) {
+    const float a = base + static_cast<float>(k) * kSplitSpread;
+    w.SpawnPooled<ShadowBall>(at, Vec2{std::cos(a) * speed, std::sin(a) * speed}, frag, ignore);
+  }
 }
 
 void ShadowBall::Hit(World& w, Actor& target) {
@@ -98,21 +121,15 @@ void ShadowBall::Hit(World& w, Actor& target) {
     w.Fx().AddRing(pos, kBurstRadius);
     w.Fx().Burst(pos, 14, Hex(0xffb347), 4.f, 18.f);
   }
-  if (spec_.split) {  // 분열: 맞은 적은 건너뛰고 세 갈래로
-    ShotSpec frag = spec_;
-    frag.radius = std::max(4.f, spec_.radius * 0.55f);
-    frag.damage = spec_.damage * 0.4f;
-    frag.life = 26;
-    frag.pierce = 0;
-    frag.bounces = 0;
-    frag.fragment = true;
-    frag.charged = false;
-    const float base = std::atan2(vel.y, vel.x), speed = std::max(6.f, std::hypot(vel.x, vel.y) * 0.8f);
-    for (int k = -1; k <= 1; ++k) {
-      const float a = base + static_cast<float>(k) * 0.9f;
-      w.SpawnPooled<ShadowBall>(pos, Vec2{std::cos(a) * speed, std::sin(a) * speed}, frag, &target);
-    }
-  }
+  // 분열: 일반 적은 건너뛰고 주변으로 퍼지고, 보스는 커다란 몸이라 조각 셋을 모두 맞는다
+  Split(w, pos, vel, target.Kind() == ActorKind::Boss ? nullptr : &target);
+}
+
+// 튕김 한 번을 쓰고, 조금 뒤에는 이미 맞힌 적(보스 포함)도 다시 맞힐 수 있게 한다
+void ShadowBall::UseBounce() {
+  --spec_.bounces;
+  life_ = std::max(life_, 30);
+  rehit_ = kRehitDelay;
 }
 
 void ShadowBall::Update(World& w) {
@@ -123,23 +140,30 @@ void ShadowBall::Update(World& w) {
   ++age_;
   const Color puff = Hex(0x9a5cff);
   if (--life_ <= 0) { w.Fx().Burst(pos, 6, puff, 2.f, 14.f); Kill(); return; }
+  if (rehit_ > 0 && --rehit_ == 0) hitCount_ = 0;
 
+  // 뜬 발판(OneWay)은 뚫고 지나간다. 지면/벽돌/벽에 닿으면 사라지거나 튕긴다.
   const float T = static_cast<float>(cfg::kTile);
   const Level& lv = w.GetLevel();
-  auto solid = [&](float x, float y) { return lv.Solid(static_cast<int>(std::floor(x / T)), static_cast<int>(std::floor(y / T))); };
+  auto solid = [&](float x, float y) {
+    const int c = static_cast<int>(std::floor(x / T)), r = static_cast<int>(std::floor(y / T));
+    return lv.Solid(c, r) && !lv.OneWay(c, r);
+  };
   if (solid(pos.x, pos.y)) {
+    // 어느 축으로 들어왔는지 보고 그 축의 속도를 뒤집은 방향 = 벽에서 튀어나오는 방향
+    Vec2 out = vel;
+    if (!solid(prev.x, pos.y)) out.x = -out.x;
+    else if (!solid(pos.x, prev.y)) out.y = -out.y;
+    else out = {-out.x, -out.y};
+    Split(w, prev, out, nullptr);  // 분열탄은 벽에 닿아도 갈라진다
     if (spec_.bounces <= 0) {
       w.Fx().Burst(pos, 8, puff, 3.f, 20.f);
       Kill();
       return;
     }
-    // 튕김: 어느 축으로 들어왔는지 보고 그 축의 속도를 뒤집는다
-    --spec_.bounces;
-    if (!solid(prev.x, pos.y)) vel.x = -vel.x;
-    else if (!solid(pos.x, prev.y)) vel.y = -vel.y;
-    else vel = {-vel.x, -vel.y};
+    vel = out;
     pos = prev;
-    life_ = std::max(life_, 24);
+    UseBounce();
     w.Fx().Burst(pos, 5, Hex(0xd9b8ff), 2.f, 10.f);
   }
 
@@ -151,13 +175,24 @@ void ShadowBall::Update(World& w) {
     if (spec_.pierce > 0) --spec_.pierce;
     else stop = true;
   };
+  // 튕기는 탄: 관통이 다 떨어져도 튕김이 남아 있으면 맞힌 자리에서 아무 방향으로나 튀어 나간다
+  auto ricochet = [&]() {
+    if (!stop || spec_.bounces <= 0) return;
+    stop = false;
+    const float a = RandRange(0.f, 2.f * kPi), speed = std::hypot(vel.x, vel.y);
+    vel = {std::cos(a) * speed, std::sin(a) * speed};
+    UseBounce();
+    w.Fx().Burst(pos, 6, Hex(0xd9b8ff), 2.5f, 12.f);
+  };
   w.ForEach(ActorKind::Enemy, tryHit);
+  ricochet();
   if (!stop) {
     if (Boss* boss = w.GetBoss()) {
       if (!boss->invulnerable && !boss->dying && !AlreadyHit(boss) && boss->Bounds().Overlaps(box)) {
         Hit(w, *boss);
         if (spec_.pierce > 0) --spec_.pierce;
         else stop = true;
+        ricochet();
       }
     }
   }

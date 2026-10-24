@@ -82,9 +82,14 @@ void BuildCave(Level& level) {
 void BuildBossArena(Level& level) {
   Builder b(level);
   b.Walls();
-  b.Plat(4, 7, 12); b.Plat(22, 25, 12); b.Plat(12, 17, 9);
-  b.Heart(5, 11); b.Heart(23, 11);
-  b.Coin(13, 8, 4);
+  // 좌우 대칭 3층 '왕좌' 발판: 아래층(양 끝 + 가운데) -> 가운데층 둘 -> 맨 위 하나.
+  // 한 층 높이 3칸은 점프(약 4칸)로 오를 수 있고, 가로 빈칸은 1~2칸이다.
+  // 충격파는 아래층, 가로 탄막은 층을 옮겨 다니며 피한다. 플레이어 공은 뜬 발판을 뚫는다.
+  b.Plat(2, 5, 12); b.Plat(13, 16, 12); b.Plat(24, 27, 12);
+  b.Plat(8, 11, 9); b.Plat(18, 21, 9);
+  b.Plat(13, 16, 6);
+  b.Heart(3, 11); b.Heart(25, 11);
+  b.Coin(13, 5, 4);
   level.Spawns().push_back({SpawnType::Boss, {cfg::kScreenW * 0.5f, -120.f}});
 }
 

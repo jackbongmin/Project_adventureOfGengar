@@ -26,7 +26,13 @@ namespace {
 constexpr int kDashFrames = 10;     // 약 0.17초 (속도는 stats::DashSpeed, 기본 약 110px)
 constexpr int kDashGap = 14;        // 대시 칸이 여러 개여도 이만큼은 떨어져야 다시 대시
 constexpr int kGhostLife = 12;
-constexpr int kChargeFrames = 60;   // 차지샷: 1초
+const Color kPhaseGreen = Hex(0x6fffa8);  // 무적 대시 중 유령빛
+// 차지샷: 오래 모을수록 단계가 오른다. 단계별 모으는 시간(프레임)과 피해·크기 배율
+constexpr int kChargeTiers = 4;
+constexpr int kChargeFrames[kChargeTiers] = {30, 60, 105, 150};  // 0.5초 / 1초 / 1.75초 / 2.5초
+constexpr float kChargeDamage[kChargeTiers] = {2.f, 4.f, 7.f, 10.f};
+constexpr float kChargeSize[kChargeTiers] = {1.4f, 1.8f, 2.2f, 2.6f};
+const Color kChargeColor[kChargeTiers] = {Hex(0xc58bff), Hex(0x7ae0ff), Hex(0xff7ad9), Hex(0xffe27a)};
 
 }  // namespace
 
@@ -69,7 +75,9 @@ void Player::Update(World& w) {
     --dashTimer_;
     vel.x = static_cast<float>(dashDir_) * stats::DashSpeed(s);
     vel.y = 0.f;
-    if (dashTimer_ % 2 == 0) ghosts_.push_back({{Bounds().Center().x, Bounds().Center().y - 7.f}, facing_, static_cast<float>(animFrame_), kGhostLife});
+    const bool phase = s.Has(CardId::PhaseDash);
+    if (dashTimer_ % 2 == 0) ghosts_.push_back({{Bounds().Center().x, Bounds().Center().y - 7.f}, facing_, static_cast<float>(animFrame_), kGhostLife, phase});
+    if (phase) w.Fx().Burst(Bounds().Center(), 2, kPhaseGreen, 1.5f, 12.f);  // 무적 대시: 초록 유령 불씨
     UpdateDashSkills(w);
     if (dashTimer_ == 0) vel.x = static_cast<float>(dashDir_) * maxSpeed;  // 끝나면 최고 속도로 이어 달린다
   } else if (intent_.moveX != 0.f) {
@@ -133,17 +141,22 @@ void Player::Update(World& w) {
 
   // ---- 공격 ----
   if (cooldown_ > 0) --cooldown_;
-  if (s.Has(CardId::ChargeShot)) {  // 차지샷: 누른 순간 한 발, 꾹 누르고 있으면 모으고, 다 모은 뒤 떼면 큰 공
+  if (s.Has(CardId::ChargeShot)) {  // 차지샷: 누른 순간 한 발, 꾹 누르고 있으면 단계가 오르고, 떼면 그 단계의 큰 공
     if (intent_.shoot) {
-      if (!shootHeld_ && cooldown_ <= 0) Shoot(w, false);
-      if (++charge_ == kChargeFrames) { w.Snd().Tone(660.f, 1320.f, 0.12f, Wave::Square, 0.05f); w.Fx().Burst(Bounds().Center(), 10, Hex(0xffe27a), 3.f, 14.f); }
+      if (!shootHeld_ && cooldown_ <= 0) Shoot(w, 0);
+      const int before = ChargeTier();
+      charge_ = std::min(charge_ + 1, kChargeFrames[kChargeTiers - 1]);
+      if (const int tier = ChargeTier(); tier > before) {  // 단계가 오를 때마다 높아지는 소리 + 그 단계 색 불꽃
+        w.Snd().Tone(440.f + 220.f * static_cast<float>(tier), 880.f + 440.f * static_cast<float>(tier), 0.1f, Wave::Square, 0.05f);
+        w.Fx().Burst(Bounds().Center(), 6 + 3 * tier, kChargeColor[tier - 1], 2.f + static_cast<float>(tier), 14.f);
+      }
     } else {
-      if (shootHeld_ && charge_ >= kChargeFrames) Shoot(w, true);
+      if (shootHeld_ && ChargeTier() > 0) Shoot(w, ChargeTier());
       charge_ = 0;
     }
     shootHeld_ = intent_.shoot;
   } else if (intent_.shoot && cooldown_ <= 0) {
-    Shoot(w, false);
+    Shoot(w, 0);
   }
   if ((intent_.ultimate || ultQueued_) && s.gauge >= 100.f) CastUltimate(w);
   ultQueued_ = false;
@@ -189,7 +202,7 @@ ShotSpec Player::MakeShot(const World& w) const {
   ShotSpec sp;
   sp.radius = stats::ShotRadius(s);
   sp.damage = stats::Damage(s) * (LastStand(w) ? 1.5f : 1.f);
-  sp.life = stats::ShotLife(s);
+  sp.life = static_cast<int>(static_cast<float>(stats::ShotLife(s)) * stats::BounceLifeScale(s));
   sp.pierce = stats::Pierce(s);
   sp.bounces = stats::Bounces(s);
   sp.homing = s.Has(CardId::Homing);
@@ -201,22 +214,23 @@ ShotSpec Player::MakeShot(const World& w) const {
   return sp;
 }
 
-void Player::Shoot(World& w, bool charged) {
+void Player::Shoot(World& w, int chargeTier) {
   const Session& s = w.Sess();
   const ShotSpec base = MakeShot(w);
   const float speed = stats::ShotSpeed(s);
   const Vec2 origin{pos.x + size.x * 0.5f + static_cast<float>(facing_) * 14.f, pos.y + 15.f};
-  if (charged) {  // 차지샷: 3배 크기·3배 피해, 모든 적을 관통
+  if (chargeTier > 0) {  // 차지샷: 단계에 따라 피해 2/4/7/10배, 모든 적을 관통
+    const int k = chargeTier - 1;
     ShotSpec big = base;
-    big.radius *= 2.2f;
-    big.damage *= 3.f;
+    big.radius *= kChargeSize[k];
+    big.damage *= kChargeDamage[k];
     big.life = static_cast<int>(static_cast<float>(base.life) * 1.3f);
     big.pierce = 99;
     big.charged = true;
     w.SpawnPooled<ShadowBall>(origin, Vec2{static_cast<float>(facing_) * speed * 0.85f, 0.f}, big);
-    w.Fx().Shake(5.f);
-    w.Fx().Burst(origin, 16, Hex(0xffe27a), 4.f, 18.f);
-    w.Snd().Tone(220.f, 110.f, 0.2f, Wave::Saw, 0.08f);
+    w.Fx().Shake(2.f + 2.f * static_cast<float>(chargeTier));
+    w.Fx().Burst(origin, 8 + 6 * chargeTier, kChargeColor[k], 2.f + static_cast<float>(chargeTier), 18.f);
+    w.Snd().Tone(260.f - 30.f * static_cast<float>(chargeTier), 110.f, 0.12f + 0.04f * static_cast<float>(chargeTier), Wave::Saw, 0.08f);
     cooldown_ = stats::FireCooldown(s);
     return;
   }
@@ -329,7 +343,12 @@ float Player::DashRefill(const World& w) const {
   return static_cast<float>(rechargeTimer_) / static_cast<float>(std::max(1, stats::DashRecharge(w.Sess())));
 }
 
-float Player::ChargeRatio() const { return std::min(1.f, static_cast<float>(charge_) / static_cast<float>(kChargeFrames)); }
+float Player::ChargeRatio() const { return std::min(1.f, static_cast<float>(charge_) / static_cast<float>(kChargeFrames[kChargeTiers - 1])); }
+int Player::ChargeTier() const {
+  int tier = 0;
+  while (tier < kChargeTiers && charge_ >= kChargeFrames[tier]) ++tier;
+  return tier;
+}
 
 void Player::CheckHazards(World& w) {
   const Level& lv = w.GetLevel();
@@ -391,10 +410,12 @@ void Player::Defeat(World& w) {
   w.Snd().Play(Sfx::PlayerDie);
 }
 
-void Player::Render(Graphics& gfx, const World&) {
+void Player::Render(Graphics& gfx, const World& w) {
   if (defeated_) return;
-  for (const Ghost& g : ghosts_) {  // 대시 잔상: 오래된 것일수록 옅게
-    DrawPhantom(gfx, g.center, g.facing, g.time, 1.f, 0.45f * static_cast<float>(g.life) / static_cast<float>(kGhostLife));
+  for (const Ghost& g : ghosts_) {  // 대시 잔상: 오래된 것일수록 옅게. 무적 대시 잔상은 초록빛을 두른다
+    const float k = static_cast<float>(g.life) / static_cast<float>(kGhostLife);
+    if (g.phase) gfx.Glow(g.center.x, g.center.y, 26.f, WithAlpha(kPhaseGreen, 0.35f * k));
+    DrawPhantom(gfx, g.center, g.facing, g.time, 1.f, (g.phase ? 0.35f : 0.45f) * k);
   }
   if (invuln_ > 0 && (invuln_ / 4) % 2) return;  // 무적 깜빡임
   const Vec2 c = Bounds().Center();
@@ -402,12 +423,23 @@ void Player::Render(Graphics& gfx, const World&) {
   style.happy = style.hat = wearingHat_;
   style.hatGlow = wearingHat_ ? 1.f : 0.f;
   style.squash = squash_;
-  if (charge_ > 10) {  // 차지샷 모으는 중: 다 모이면 금빛으로 깜빡인다
+  if (charge_ > 10) {  // 차지샷 모으는 중: 단계마다 손끝 빛의 색이 바뀌고, 최대 단계면 금빛으로 깜빡인다
     const float k = ChargeRatio();
-    const bool full = k >= 1.f;
-    gfx.Glow(c.x + static_cast<float>(facing_) * 14.f, c.y - 2.f, 10.f + 16.f * k, full && (animFrame_ / 4) % 2 ? Rgb(255, 226, 122, 150) : Rgb(197, 139, 255, 110));
+    const int tier = ChargeTier();
+    const bool full = tier == kChargeTiers;
+    const Color glow = tier > 0 ? kChargeColor[tier - 1] : Hex(0xc58bff);
+    gfx.Glow(c.x + static_cast<float>(facing_) * 14.f, c.y - 2.f, 10.f + 22.f * k, full && (animFrame_ / 4) % 2 ? Rgb(255, 255, 255, 170) : WithAlpha(glow, 0.5f));
+    for (int i = 0; i < tier; ++i) {  // 머리 위 작은 점 = 모은 단계
+      gfx.FillRect(c.x - 13.f + 7.f * static_cast<float>(i), pos.y - 22.f, 5, 5, kChargeColor[i]);
+    }
   }
-  DrawPhantom(gfx, {c.x, c.y - 7.f}, facing_, static_cast<float>(animFrame_), 1.f, 1.f, style);  // 스프라이트 발끝을 히트박스 바닥에 맞춘다
+  // 무적 대시 중: 반투명해지고 초록 유령빛이 감싼다 (맞지 않는 상태라는 표시)
+  const bool phasing = dashTimer_ > 0 && w.Sess().Has(CardId::PhaseDash);
+  if (phasing) {
+    gfx.Glow(c.x, c.y - 7.f, 34.f, WithAlpha(kPhaseGreen, 0.55f));
+    gfx.PixelRing(c.x, c.y - 7.f, 22.f, 2.f, WithAlpha(kPhaseGreen, 0.6f), 2.f);
+  }
+  DrawPhantom(gfx, {c.x, c.y - 7.f}, facing_, static_cast<float>(animFrame_), 1.f, phasing ? 0.5f : 1.f, style);  // 스프라이트 발끝을 히트박스 바닥에 맞춘다
   if (shield_) gfx.PixelRing(c.x, c.y - 4.f, 26.f + std::sin(static_cast<float>(animFrame_) * 0.1f) * 2.f, 2.f, Rgb(122, 224, 255, 140), 2.f);
 }
 

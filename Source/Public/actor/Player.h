@@ -35,11 +35,12 @@ class Player : public Character {
   // HUD 표시용
   int DashReady() const { return std::max(0, charges_); }
   float DashRefill(const World& world) const;  // 다음 칸이 차는 정도 0~1
-  float ChargeRatio() const;                   // 차지샷 모으는 정도 0~1
+  float ChargeRatio() const;                   // 차지샷 모으는 정도 0~1 (최대 단계까지)
+  int ChargeTier() const;                      // 차지샷 지금 단계 0~4 (0 = 아직 안 모임)
 
  private:
   void Defeat(World& world);
-  void Shoot(World& world, bool charged);
+  void Shoot(World& world, int chargeTier);  // chargeTier > 0 이면 차지샷
   void CastUltimate(World& world);
   void UpdateRain(World& world);
   void UpdateDashSkills(World& world);
@@ -74,7 +75,7 @@ class Player : public Character {
   int rechargeTimer_ = 0;
   int airDashesUsed_ = 0;
   std::vector<const Actor*> rushHits_;  // 그림자 돌진: 이번 대시에 이미 벤 적
-  struct Ghost { Vec2 center; int facing; float time; int life; };
+  struct Ghost { Vec2 center; int facing; float time; int life; bool phase; };  // phase = 무적 대시 잔상 (초록빛)
   std::vector<Ghost> ghosts_;  // 대시 잔상
 };
 

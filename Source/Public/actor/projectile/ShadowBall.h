@@ -11,10 +11,10 @@ struct ShotSpec {
   float damage = 1.f;
   int life = 36;
   int pierce = 0;          // 적을 맞혀도 사라지지 않고 더 지나갈 수 있는 수
-  int bounces = 0;         // 벽/바닥에 닿아도 튕겨서 계속 가는 수
+  int bounces = 0;         // 벽/바닥이나 적에 닿아도 튕겨서 계속 가는 수 (적에게 맞으면 아무 방향으로 튄다)
   bool homing = false;
   bool burst = false;      // 맞힌 자리 주변에 50% 폭발
-  bool split = false;      // 맞힌 자리에서 작은 공 3개로 분열
+  bool split = false;      // 적에게 맞거나 벽에 닿으면 작은 공 3개로 분열 (공 하나당 한 번)
   bool curse = false;      // 맞은 적이 2초 동안 받는 피해 2배 (같은 적은 15초 쿨타임)
   bool fragment = false;   // 분열 조각: 다시 폭발/분열하지 않는다 (연쇄 방지)
   bool charged = false;    // 차지샷 (크고 밝게 그린다)
@@ -40,6 +40,8 @@ class ShadowBall : public Actor {
   void Steer(World& w);
   bool AlreadyHit(const Actor* a) const;
   void Hit(World& w, Actor& target);  // 피해 + 폭발/분열 처리
+  void Split(World& w, Vec2 at, Vec2 dir, const Actor* ignore);
+  void UseBounce();
 
   ShotSpec spec_;
   int life_;
@@ -48,6 +50,9 @@ class ShadowBall : public Actor {
   Vec2 history_[kHistory] = {};  // 최근 위치 (원형 버퍼, age_ 로 인덱스)
   const Actor* hits_[kMaxHits] = {};  // 이미 맞힌 대상 (관통 중 같은 적을 두 번 맞히지 않는다)
   int hitCount_ = 0;
+  int rehit_ = 0;            // >0: 튕긴 뒤 남은 프레임. 0이 되면 맞힌 목록을 비운다
+  bool bouncy_ = false;      // 튕기는 탄 카드가 있었나 (분열 조각에 튕김을 물려준다)
+  bool splitDone_ = false;
 };
 
 }  // namespace gengar
