@@ -14,7 +14,7 @@
 namespace gengar {
 
 Caster::Caster(Vec2 p, int stage)
-    : Enemy(p, {26.f, 32.f}, 2 + stage), orbSpeed_(3.f + 0.4f * static_cast<float>(stage)) {
+    : Enemy(p, {26.f, 32.f}, 26 + 10 * stage), orbSpeed_(3.f + 0.4f * static_cast<float>(stage)) {
   SetController(std::make_unique<TurretController>(120 - 15 * stage, 80 + RandInt(0, 40)));
   facing_ = -1;
 }
@@ -23,6 +23,10 @@ void Caster::OnShoot(World& w, Vec2 aim) {
   DebugLog("[caster] fire at x=%d", static_cast<int>(pos.x));
   const Vec2 origin{pos.x + size.x * 0.5f + static_cast<float>(facing_) * 10.f, pos.y + 8.f};
   w.SpawnPooled<EnemyOrb>(origin, Vec2{aim.x * orbSpeed_, aim.y * orbSpeed_});
+  if (Elite()) {  // 정예: 양옆으로 0.3rad 벌어진 두 발을 더 쏜다
+    const float base = std::atan2(aim.y, aim.x);
+    for (float da : {-0.3f, 0.3f}) w.SpawnPooled<EnemyOrb>(origin, Vec2{std::cos(base + da) * orbSpeed_, std::sin(base + da) * orbSpeed_});
+  }
   w.Snd().Play(Sfx::BossShoot);
 }
 

@@ -16,7 +16,9 @@ inline constexpr float kMaxFall = 12.0f;
 
 inline constexpr int kStageCount = 3;
 inline constexpr int kBossStage = 2;  // 마지막 스테이지 = 보스전
-inline constexpr int kBossHp = 300;  // 보스 체력 (고정, stats::BossMaxHp)
+// 보스 체력 (고정, stats::BossMaxHp). 피해 10단위 기준.
+// 예전 단위로 600 을 목표로 잡고, 공격력 3단계 빌드에서 같은 타수(예전 4 피해 x 150타 = 새 19 피해 x 150타)가 되게 3000.
+inline constexpr int kBossHp = 3000;
 
 inline constexpr int kCrumbleFrames = 50;    // 밟고 약 0.8초 뒤 추락
 inline constexpr int kCrumbleRespawn = 200;  // 약 3.3초 뒤 복구

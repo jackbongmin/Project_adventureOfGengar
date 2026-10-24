@@ -20,6 +20,7 @@ struct Session {
   float coinFrac = 0.f;  // 탐욕 카드의 소수점 코인 (1이 넘으면 코인 1개)
   int score = 0;
   float gauge = 0.f;  // 필살기 게이지 0~100
+  int shopDraws = 0;  // 이번 판에 상점에서 뽑은 횟수 (뽑기 가격 = 50 + 25 x 이 값, 다음 상점에도 이어진다)
   Progress prog;
 
   // 스테이지 시작 시점 스냅샷 (사망 후 재도전 시 복구)

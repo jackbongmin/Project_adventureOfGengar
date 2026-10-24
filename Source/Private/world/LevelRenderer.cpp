@@ -119,6 +119,31 @@ void RenderLevelTiles(Graphics& gfx, const Level& level, float camX, int frame) 
           gfx.DrawSprite(hot ? ts.crumbleHot : ts.crumble, x + ox, y, art::kPixel);
           break;
         }
+        case Tile::Barrier: {  // 마법 벽: 위아래로 흐르는 보랏빛 띠 + 가운데 밝은 줄
+          const float flow = std::fmod(static_cast<float>(frame) * 2.f + y, 32.f);
+          gfx.FillRect(x + 4.f, y, T - 8.f, T, Rgb(150, 60, 230, 120));
+          gfx.FillRect(x + 12.f, y, 8.f, T, Rgb(230, 170, 255, 170));
+          gfx.FillRect(x + 4.f, y + flow - 4.f, T - 8.f, 4.f, Rgb(255, 230, 255, 200));
+          if ((c + r + frame / 6) % 4 == 0) gfx.FillRect(x + 2.f, y + 14.f, 4.f, 4.f, Hex(0xffffff));
+          break;
+        }
+        case Tile::Spring: {  // 점프 버섯: 바닥에 박힌 분홍 갓 + 흰 점, 위로 올라가는 화살표가 깜빡인다
+          gfx.DrawSprite(ts.groundTop, x, y, art::kPixel);
+          const float squish = ((frame / 10 + c) % 6 == 0) ? 3.f : 0.f;
+          gfx.Glow(x + T * 0.5f, y - 6.f, 30.f, Rgb(255, 92, 168, 70));
+          gfx.FillRect(x, y - 8.f + squish, T, 12.f - squish, Hex(0xd9367a));
+          gfx.FillRect(x + 4.f, y - 14.f + squish, T - 8.f, 6.f, Hex(0xff5ca8));
+          gfx.FillRect(x + 10.f, y - 18.f + squish, T - 20.f, 4.f, Hex(0xff8cc4));
+          gfx.FillRect(x + 6.f, y - 8.f + squish, 4.f, 4.f, Hex(0xffffff));
+          gfx.FillRect(x + 20.f, y - 12.f + squish, 6.f, 4.f, Hex(0xffffff));
+          gfx.FillRect(x + 14.f, y - 4.f + squish, 4.f, 4.f, Hex(0xffffff));
+          const float up = static_cast<float>((frame / 4) % 12) * 2.f;  // 위로 흐르는 화살표
+          const Color a = Rgb(255, 170, 220, 200 - static_cast<int>(up) * 7);
+          gfx.FillRect(x + 14.f, y - 30.f - up, 4.f, 2.f, a);
+          gfx.FillRect(x + 12.f, y - 28.f - up, 2.f, 2.f, a);
+          gfx.FillRect(x + 18.f, y - 28.f - up, 2.f, 2.f, a);
+          break;
+        }
         case Tile::Empty: break;
       }
     }

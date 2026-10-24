@@ -68,9 +68,11 @@ void DrawShadowBall(Graphics& g, Vec2 c, float r, float t, float alpha) {
   if (r < 3.f) return;
   const art::Assets& a = art::A();
   if (alpha >= 1.f) g.Glow(c.x, c.y, r * 1.9f, Rgb(160, 90, 255, 70));
-  const int ps = Clamp(static_cast<int>(std::lround(r * 2.f / 8.f)), 1, 4);
+  // 8x8 도트 공을 반지름의 약 2.3배 크기(2px 단위)로 늘려 그린다. 정수 배율(2 -> 3 -> 4)로만 키우면
+  // 공격력 2·4단계에서만 커져 보여서, 단계마다(7 -> 8.8 -> 10.6 ... -> 16 -> 20 -> 24px ...) 바로 커지게 한다.
+  const float size = std::max(8.f, std::round(r * 2.3f / 2.f) * 2.f);
   const SpriteId id = a.ball[(static_cast<int>(t / 4.f)) % 2];
-  g.DrawSprite(id, c.x - 4.f * static_cast<float>(ps), c.y - 4.f * static_cast<float>(ps), ps, false, alpha);
+  g.DrawSpriteSized(id, std::round(c.x - size * 0.5f), std::round(c.y - size * 0.5f), size, size, false, alpha);
 }
 
 }  // namespace gengar

@@ -8,10 +8,11 @@ enum class CardId {
   // 공격
   AttackUp, FireRate, RangeUp, ShotSpeed, Knockback, Critical, Pierce, BackShot, Execute,
   MultiShot, Bounce, BurstShot, Curse, Homing, Split, ChargeShot,
+  Brimstone, Laser, Boomerang, WaveShot, Scatter, HeavyShot, Poison, Frost, Chain, Orbit,  // 0.4.2: 공 모양/메타 카드
   // 방어
   MaxHeart, Heal, LongGuard, SoulDrain, Thorns, Shield, ExtraLife,
   // 이동
-  MoveSpeed, JumpUp, AirJump, Float,
+  MoveSpeed, JumpUp, AirJump, Float, Wings,
   // 대시
   DashRange, DashRecharge, DashCharge, AirDash, PhaseDash, ShadowRush, Afterimage,
   // 필살기

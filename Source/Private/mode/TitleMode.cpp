@@ -59,8 +59,8 @@ struct ControlGroup {
 void DrawControls(Graphics& g) {
   const ControlGroup groups[] = {
       {"MOVE", Hex(0x6fe08a), {{{"LEFT", "RIGHT"}, "MOVE", ""}, {{"C", "SPACE", "UP"}, "JUMP", "HOLD = HIGHER"}}},
-      {"ACTION", Hex(0xff6a6a), {{{"Z"}, "SHADOW BALL", "HOLD = REPEAT"}, {{"X", "SHIFT"}, "DASH", "DODGES ATTACKS"}, {{"A"}, "ULTIMATE", "WHEN GAUGE IS FULL"}}},
-      {"MENU", Hex(0xc58bff), {{{"ESC", "P"}, "PAUSE", ""}, {{"ENTER"}, "SELECT", ""}}},
+      {"ACTION", Hex(0xff6a6a), {{{"Z"}, "SHADOW BALL", "HOLD = REPEAT"}, {{"X", "SHIFT"}, "DASH", "QUICK BURST"}, {{"A"}, "ULTIMATE", "WHEN GAUGE IS FULL"}}},
+      {"MENU", Hex(0xc58bff), {{{"ESC", "P"}, "PAUSE", ""}, {{"ENTER"}, "SELECT", ""}, {{"TAB"}, "STATUS", "STATS AND CARDS"}}},
   };
   constexpr float kPanelX = 110.f, kPanelY = 112.f, kPanelW = 740.f, kKeysRight = 400.f;
   DrawPixelPanel(g, kPanelX, kPanelY, kPanelW, 340.f);
@@ -91,7 +91,7 @@ void DrawControls(Graphics& g) {
 
 void TitleMode::Update(Game& game) {
   ++frame_;
-  if ((Debug().bot || Debug().stompDemo > 0 || Debug().startPicks > 0 || Debug().startInShop) && frame_ > 30) { game.StartNewRun(); return; }  // bot=1 / stompdemo / pick / shop 이면 시네마틱 없이 자동 시작
+  if ((Debug().bot || Debug().stompDemo > 0 || Debug().startPicks > 0 || Debug().startInShop || !Debug().cards.empty()) && frame_ > 30) { game.StartNewRun(); return; }  // bot=1 / stompdemo / pick / shop / cards 이면 시네마틱 없이 자동 시작
   switch (screen_) {
     case Screen::Main: UpdateMain(game); break;
     case Screen::Stages: UpdateStages(game); break;

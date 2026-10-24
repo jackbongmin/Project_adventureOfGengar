@@ -85,6 +85,11 @@ void Boss::Update(World& w) {
   if (curse_ > 0) --curse_;
   if (curseCooldown_ > 0) --curseCooldown_;
   if (attackNameTimer_ > 0) --attackNameTimer_;
+  if (poison_ > 0 && --poison_ % 30 == 0 && !dying) {
+    DamageInfo tick{poisonDmg_, 1};
+    tick.dot = true;
+    TakeDamage(w, tick);
+  }
 
   const Vec2 pc = PlayerCenter();
   look_ = {Clamp((pc.x - pos.x) / 20.f, -1.f, 1.f) * 7.f, Clamp((pc.y - pos.y) / 20.f, -1.f, 1.f) * 6.f};
@@ -118,15 +123,16 @@ void Boss::Update(World& w) {
 
 void Boss::TakeDamage(World& w, const DamageInfo& info) {
   if (invulnerable || dying || Debug().immortal) { w.Snd().Play(Sfx::BossHit); return; }
-  if (!info.ultimate) w.AddGauge(3.f);
+  if (!info.ultimate && !info.dot) w.AddGauge(3.f);
   float dmg = info.amount * damageMultiplier;
   if (info.fromPlayer) dmg *= stats::TargetMultiplier(w.Sess(), hp_ / maxHp_, curse_ > 0);
   hp_ -= dmg;
   flash_ = 5;
   if (info.curse && curseCooldown_ == 0) { curse_ = stats::kCurseFrames; curseCooldown_ = stats::kCurseCooldown; }
+  if (info.poison && !info.dot) { poison_ = 180; poisonDmg_ = std::max(poisonDmg_, dmg * 0.25f); }
   const std::string text = "-" + std::to_string(static_cast<int>(std::lround(dmg))) + (info.crit ? "!" : "");
-  w.Fx().Pop({pos.x + RandRange(-30.f, 30.f), pos.y - 60.f}, text, info.crit ? Hex(0xffe27a) : Hex(0xffd0ff));
-  w.Snd().Play(Sfx::BossHit);
+  w.Fx().Pop({pos.x + RandRange(-30.f, 30.f), pos.y - 60.f}, text, info.dot ? Hex(0x6fe08a) : info.crit ? Hex(0xffe27a) : Hex(0xffd0ff));
+  if (!info.dot) w.Snd().Play(Sfx::BossHit);
   if (hp_ > 0.f) return;
 
   hp_ = 0.f;
@@ -134,7 +140,7 @@ void Boss::TakeDamage(World& w, const DamageInfo& info) {
   beam.active = false;
   w.ForEach(ActorKind::EnemyShot, [](Actor& a) { a.Kill(); });
   w.ForEach(ActorKind::Hazard, [](Actor& a) { a.Kill(); });
-  w.ForEach(ActorKind::Enemy, [&](Actor& a) { static_cast<Enemy&>(a).TakeDamage(w, DamageInfo{999.f, 1, false, true}); });
+  w.ForEach(ActorKind::Enemy, [&](Actor& a) { static_cast<Enemy&>(a).TakeDamage(w, DamageInfo{99999.f, 1, false, true}); });
   w.Snd().Play(Sfx::BossDeath);
   machine_.Change(MakeBossDyingState());
   machine_.Apply();

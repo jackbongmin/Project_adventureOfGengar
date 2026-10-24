@@ -27,7 +27,7 @@ Tile Level::At(int c, int r) const {
 
 bool Level::Solid(int c, int r) const {
   const Tile t = At(c, r);
-  return t == Tile::Ground || t == Tile::Brick || t == Tile::Crumble || t == Tile::OneWay;
+  return t == Tile::Ground || t == Tile::Brick || t == Tile::Crumble || t == Tile::OneWay || t == Tile::Barrier || t == Tile::Spring;
 }
 
 void Level::Set(int c, int r, Tile t) {

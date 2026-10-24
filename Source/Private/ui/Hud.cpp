@@ -34,6 +34,23 @@ void DrawHud(Graphics& g, const World& w, const Session& s) {
     g.Text("LV " + std::to_string(s.prog.level), 12.f, 54.f, 2, Hex(0x7ae0ff));
   }
 
+  // 매복 결투장: "WAVE 2/3" + 제한 시간 바. 5초 안쪽이면 빨갛게 깜빡인다. 마지막 웨이브는 "FINAL WAVE"
+  if (w.ArenaActive()) {
+    const float bw = 260.f, bx = kW * 0.5f - bw * 0.5f, by = 60.f;
+    const int clock = w.ArenaClock();
+    const bool hurry = clock > 0 && clock <= 300;
+    const bool finalWave = w.ArenaWave() >= w.ArenaWaves();
+    const std::string label = w.ArenaSummoning() ? "INCOMING..." : finalWave ? "FINAL WAVE" : "WAVE " + std::to_string(w.ArenaWave()) + "/" + std::to_string(w.ArenaWaves());
+    g.Text(label, kW * 0.5f, by, 2, hurry ? Hex(0xff6a7a) : Hex(0xffe27a), Align::Center);
+    if (clock > 0 && !w.ArenaSummoning()) {
+      const float ratio = static_cast<float>(clock) / static_cast<float>(w.ArenaClockMax());
+      const Color fill = hurry ? ((clock / 8) % 2 ? Hex(0xff3050) : Hex(0xffffff)) : Hex(0xffc93c);
+      g.FillRect(bx - 2.f, by + 20.f, bw + 4.f, 10.f, Rgb(0, 0, 0, 180));
+      g.FillRect(bx, by + 22.f, std::floor(bw * ratio / 2.f) * 2.f, 6.f, fill);
+      g.Text(std::to_string((clock + 59) / 60), bx + bw + 12.f, by + 18.f, 2, hurry ? Hex(0xff6a7a) : Hex(0xffffff));
+    }
+  }
+
   // 대시 칸: 찬 칸은 하늘색, 차는 중인 칸은 아래부터 채워진다
   {
     const int slots = stats::DashCharges(s), ready = p.DashReady();

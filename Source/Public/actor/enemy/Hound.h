@@ -12,8 +12,14 @@ class Hound : public Enemy {
   void ForceAlert();  // 검증용: 즉시 추적 상태로 만든다
   int XpValue() const override { return 4; }
 
+ protected:
+  void ApplyIntent(World& world) override;
+  void UpdateEliteSkill(World& world) override;  // 정예: 0.5초 예고 뒤 빠르게 덮치기
+
  private:
   ChaseController* chase_ = nullptr;  // 소유는 Character 의 controller_
+  int lunge_ = 0;   // 덮치는 중 남은 프레임
+  int lungeDir_ = 1;
 
  protected:
   Color DeathColor() const override { return Hex(0x8a5cd0); }

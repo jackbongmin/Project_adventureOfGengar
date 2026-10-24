@@ -7,6 +7,7 @@
 #include "actor/boss/Boss.h"
 #include "actor/enemy/Bat.h"
 #include "actor/enemy/Caster.h"
+#include "actor/enemy/Hopper.h"
 #include "actor/enemy/Hound.h"
 #include "actor/enemy/Slime.h"
 #include "actor/pickup/Pickups.h"
@@ -38,32 +39,150 @@ World::World(GameContext& ctx, int stageIndex)
     Spawn<Hound>(Vec2{5.f * T, 15.f * T - 24.f}, stage_)->SetController(nullptr);
   }
   if (Debug().heartDemo) Spawn<Heart>(Vec2{3.f * cfg::kTile + 16.f, 14.f * cfg::kTile + 16.f});
-  for (const SpawnPoint& sp : level_.Spawns()) {
-    switch (sp.type) {
-      case SpawnType::Slime: Spawn<Slime>(sp.pos, stage_); break;
-      case SpawnType::Bat: Spawn<Bat>(sp.pos, stage_, sp.range); break;
-      case SpawnType::Hound: Spawn<Hound>(sp.pos, stage_); break;
-      case SpawnType::Caster: Spawn<Caster>(sp.pos, stage_); break;
-      case SpawnType::Coin: Spawn<Coin>(sp.pos); break;
-      case SpawnType::Heart: Spawn<Heart>(sp.pos); break;
-      case SpawnType::Boss: {
-        const int hp = Debug().bossHp > 0 ? Debug().bossHp : stats::BossMaxHp(ctx_.session);
-        boss_ = Spawn<Boss>(sp.pos, hp);
-        if (Debug().bossPhase > 0) boss_->SetHealthRatio(Debug().bossPhase == 1 ? 0.6f : 0.25f);
-        break;
-      }
-    }
-  }
+  for (const SpawnPoint& sp : level_.Spawns()) SpawnFrom(sp, 0);
+  arenaDone_.assign(level_.Arenas().size(), false);
   ShowBanner(level_.Name(), 150);
 
   // 스테이지를 시작할 때 적용되는 카드
   Session& s = ctx_.session;
   if (s.Has(CardId::Shield)) player_->GiveShield();
   if (s.Has(CardId::HeadStart)) s.gauge = std::max(s.gauge, 30.f);
-  if (s.Has(CardId::Familiar)) Spawn<Familiar>(player_->Bounds().Center());
+  for (int i = 0; i < s.Card(CardId::Familiar); ++i) Spawn<Familiar>(player_->Bounds().Center(), i);
   rerollsLeft_ = stats::Rerolls(s);
   pendingPicks_ = Debug().startPicks;
 }
+
+void World::SpawnFrom(const SpawnPoint& sp, int arenaTag) {
+  Enemy* e = nullptr;
+  switch (sp.type) {
+    case SpawnType::Slime: e = Spawn<Slime>(sp.pos, stage_); break;
+    case SpawnType::Bat: e = Spawn<Bat>(sp.pos, stage_, sp.range); break;
+    case SpawnType::Hound: {
+      Hound* h = Spawn<Hound>(sp.pos, stage_);
+      if (arenaTag > 0) h->ForceAlert();  // 결투장 늑대는 나오자마자 달려든다
+      e = h;
+      break;
+    }
+    case SpawnType::Caster: e = Spawn<Caster>(sp.pos, stage_); break;
+    case SpawnType::Hopper: e = Spawn<Hopper>(sp.pos, stage_); break;
+    case SpawnType::Coin: Spawn<Coin>(sp.pos); break;
+    case SpawnType::Heart: Spawn<Heart>(sp.pos); break;
+    case SpawnType::Chest: Spawn<Chest>(sp.pos); break;
+    case SpawnType::Boss: {
+      const int hp = Debug().bossHp > 0 ? Debug().bossHp : stats::BossMaxHp(ctx_.session);
+      boss_ = Spawn<Boss>(sp.pos, hp);
+      if (Debug().bossPhase > 0) boss_->SetHealthRatio(Debug().bossPhase == 1 ? 0.6f : 0.25f);
+      break;
+    }
+  }
+  if (!e) return;
+  if (sp.elite) e->MakeElite();
+  e->arenaTag = arenaTag;
+}
+
+// 결투장 양 끝 열의 빈칸을 마법 벽으로 채우거나 다시 비운다
+void World::SetArenaWalls(const ArenaDef& a, bool on) {
+  for (int c : {a.c0, a.c1}) {
+    for (int r = 0; r < cfg::kGroundRow; ++r) {
+      const Tile t = level_.At(c, r);
+      if (on && t == Tile::Empty) level_.Set(c, r, Tile::Barrier);
+      else if (!on && t == Tile::Barrier) level_.Set(c, r, Tile::Empty);
+    }
+  }
+}
+
+// 매복 결투장: 들어오면 벽이 닫히고 웨이브가 차례로 나온다. 다 잡으면 벽이 열리고 보물상자.
+void World::UpdateArenas() {
+  constexpr float T = static_cast<float>(cfg::kTile);
+  const std::vector<ArenaDef>& arenas = level_.Arenas();
+  if (arena_ < 0) {
+    const float px = player_->Bounds().Center().x;
+    for (size_t i = 0; i < arenas.size(); ++i) {
+      if (arenaDone_[i]) continue;
+      const ArenaDef& a = arenas[i];
+      if (px < static_cast<float>(a.c0 + 3) * T || px > static_cast<float>(a.c1 - 2) * T) continue;
+      arena_ = static_cast<int>(i);
+      arenaWave_ = 0;
+      arenaTimer_ = 50;
+      SetArenaWalls(a, true);
+      ShowBanner("AMBUSH!", 70);
+      fx_.Shake(8.f);
+      Snd().Play(Sfx::Alert);
+      Snd().Play(Sfx::BossSummon);
+      DebugLog("[arena] %d start (cols %d-%d, %d waves)", arena_, a.c0, a.c1, static_cast<int>(a.waves.size()));
+      return;
+    }
+    return;
+  }
+  const ArenaDef& a = arenas[static_cast<size_t>(arena_)];
+  if (arenaTimer_ > 0) {
+    if (--arenaTimer_ > 0) return;
+    // 웨이브 소환: 나올 자리마다 보랏빛(정예는 금빛) 소용돌이
+    for (const SpawnPoint& sp : a.waves[static_cast<size_t>(arenaWave_)]) {
+      SpawnFrom(sp, arena_ + 1);
+      const Vec2 at{sp.pos.x + 12.f, sp.pos.y + 12.f};
+      fx_.Burst(at, sp.elite ? 30 : 16, sp.elite ? Hex(0xffc93c) : Hex(0xb36bff), 4.f, 26.f);
+      fx_.AddRing(at, 30.f);
+    }
+    Snd().Play(Sfx::BossBlink);
+    arenaClock_ = arenaWave_ + 1 < static_cast<int>(a.waves.size()) ? ArenaClockMax() : 0;
+    DebugLog("[arena] %d wave %d/%d", arena_, arenaWave_ + 1, static_cast<int>(a.waves.size()));
+    return;
+  }
+  int alive = 0;
+  ForEach(ActorKind::Enemy, [&](Actor& e) { if (static_cast<Enemy&>(e).arenaTag == arena_ + 1) ++alive; });
+  const bool last = arenaWave_ + 1 >= static_cast<int>(a.waves.size());
+  if (!last && alive > 0 && arenaClock_ > 0) {  // 제한 시간: 마지막 5초는 1초마다 째깍, 끝나면 증원
+    --arenaClock_;
+    if (arenaClock_ > 0 && arenaClock_ <= 300 && arenaClock_ % 60 == 0) Snd().Tone(880.f, 0.f, 0.06f, Wave::Square, 0.05f);
+    if (arenaClock_ == 0) {
+      ++arenaWave_;
+      arenaTimer_ = 45;
+      ShowBanner("REINFORCEMENTS!", 70);
+      fx_.Shake(6.f);
+      Snd().Play(Sfx::Alert);
+      DebugLog("[arena] %d time up -> reinforcements", arena_);
+      return;
+    }
+  }
+  if (alive > 0) {
+    if (frame_ % 300 == 0) {  // 오래 안 끝나면 어디에 남았는지 남긴다 (검증용)
+      ForEach(ActorKind::Enemy, [&](Actor& e) {
+        if (static_cast<Enemy&>(e).arenaTag == arena_ + 1) DebugLog("[arena] left: x=%d y=%d hp=%d", static_cast<int>(e.pos.x), static_cast<int>(e.pos.y), static_cast<Enemy&>(e).Hp());
+      });
+    }
+    return;
+  }
+  if (!last && arenaClock_ > 0) {  // 빨리 정리했으면 남은 3초마다 코인 1
+    const int bonus = arenaClock_ / 180;
+    if (bonus > 0) {
+      AddCoins(bonus);
+      const Vec2 c = player_->Bounds().Center();
+      fx_.Pop({c.x, c.y - 44.f}, "FAST +" + std::to_string(bonus), Hex(0xffe27a));
+      Snd().Play(Sfx::Coin);
+    }
+  }
+  ++arenaWave_;
+  if (arenaWave_ < static_cast<int>(a.waves.size())) {
+    arenaTimer_ = 60;
+    ShowBanner("WAVE " + std::to_string(arenaWave_ + 1) + "/" + std::to_string(a.waves.size()), 60);
+    return;
+  }
+  // 끝: 벽을 열고 가운데에 보물상자를 떨어뜨린다
+  SetArenaWalls(a, false);
+  arenaDone_[static_cast<size_t>(arena_)] = true;
+  const float cx = static_cast<float>(a.c0 + a.c1 + 1) * 0.5f * T;
+  Spawn<Chest>(Vec2{cx, 3.f * T});
+  ShowBanner("AMBUSH CLEAR!", 90);
+  fx_.Shake(6.f);
+  Snd().Play(Sfx::StageClear);
+  DebugLog("[arena] %d clear", arena_);
+  arena_ = -1;
+}
+
+int World::ArenaWaves() const { return arena_ < 0 ? 0 : static_cast<int>(level_.Arenas()[static_cast<size_t>(arena_)].waves.size()); }
+// 웨이브 제한 시간: 스테이지 1은 20초, 2는 16초
+int World::ArenaClockMax() const { return stage_ == 0 ? 20 * 60 : 16 * 60; }
 
 World::~World() {
   DebugLog("[world] pooled actors: created %d, reused %d", pooledCreated_, pooledReused_);
@@ -84,6 +203,7 @@ void World::Update() {
   if (levelUpFlash_ > 0) --levelUpFlash_;
   const bool frozen = timeStop_ > 0;  // 시간 정지: 플레이어 쪽(플레이어, 내 탄, 분신, 아이템)만 움직인다
   if (!frozen) level_.UpdateCrumbles(*this);
+  if (!frozen) UpdateArenas();
   for (size_t i = 0; i < actors_.size(); ++i) {
     Actor* a = actors_[i].get();
     if (a->IsDead()) continue;
@@ -109,7 +229,14 @@ void World::Update() {
   }
   actors_.resize(keep);  // 뒤에 남은 죽은 액터(풀링 대상이 아닌 것)가 여기서 해제된다
   fx_.Update();
-  camera_.Update(player_->Bounds(), player_->Facing(), level_.PixelWidth());
+  if (arena_ >= 0) {  // 결투장 안에서는 카메라가 결투장 화면에 묶인다
+    const ArenaDef& a = level_.Arenas()[static_cast<size_t>(arena_)];
+    const float T = static_cast<float>(cfg::kTile);
+    camera_.Update(player_->Bounds(), player_->Facing(), level_.PixelWidth(), static_cast<float>(a.c0) * T,
+                   static_cast<float>(a.c1 + 1) * T - static_cast<float>(cfg::kScreenW));
+  } else {
+    camera_.Update(player_->Bounds(), player_->Facing(), level_.PixelWidth());
+  }
   if (bannerTimer_ > 0) --bannerTimer_;
   if (comboTimer_ > 0 && --comboTimer_ == 0) combo_ = 0;
   if (comboPop_ > 0) --comboPop_;
@@ -130,10 +257,54 @@ void World::Render(Graphics& gfx) const {
   gfx.SetOffset(camX + sx, sy);
   RenderLevelTiles(gfx, level_, camX, frame_);
 
+  // 결투장 소환 예고: 다음 웨이브가 나올 자리 바닥에 도는 마법진 (정예 자리는 금빛)
+  if (arena_ >= 0 && arenaTimer_ > 0) {
+    const ArenaDef& a = level_.Arenas()[static_cast<size_t>(arena_)];
+    const float k = 1.f - static_cast<float>(arenaTimer_) / 60.f;
+    for (const SpawnPoint& sp : a.waves[static_cast<size_t>(arenaWave_)]) {
+      const Vec2 at{sp.pos.x + 12.f, sp.pos.y + 12.f};
+      const Color c = sp.elite ? Rgb(255, 201, 60, 200) : Rgb(200, 110, 255, 200);
+      gfx.Glow(at.x, at.y, 20.f + 20.f * k, sp.elite ? Rgb(255, 180, 60, 90) : Rgb(180, 90, 255, 90));
+      gfx.PixelRing(at.x, at.y, 8.f + 18.f * k, 2.f, c, 2.f);
+      if ((frame_ / 4) % 2 == 0) gfx.PixelRing(at.x, at.y, 26.f - 10.f * k, 2.f, c, 2.f);
+    }
+  }
+  // 정예 적: 뒤에 금빛 기운 (몸보다 먼저 그린다)
+  for (const auto& a : actors_) {
+    if (a->IsDead() || a->Kind() != ActorKind::Enemy || !static_cast<const Enemy&>(*a).Elite()) continue;
+    const Rect b = a->Bounds();
+    const float pulse = std::sin(static_cast<float>(frame_) * 0.12f);
+    gfx.Glow(b.Center().x, b.Center().y, b.w * 1.3f + 8.f + pulse * 4.f, Rgb(255, 170, 60, 110));
+    gfx.PixelRing(b.Center().x, b.Center().y, b.w * 0.75f + 6.f + pulse * 2.f, 2.f, Rgb(255, 214, 90, 160), 2.f);
+  }
   for (int k = 0; k < kActorKindCount; ++k) {
     const ActorKind kind = static_cast<ActorKind>(k);
     for (const auto& a : actors_) {
       if (a->Kind() == kind && !a->IsDead()) a->Render(gfx, *this);
+    }
+  }
+  // 독·냉기 표식: 머리 오른쪽 위에 작은 초록 방울 / 하늘색 눈송이
+  for (const auto& a : actors_) {
+    if (a->IsDead()) continue;
+    bool poisoned = false, chilled = false;
+    if (a->Kind() == ActorKind::Enemy) {
+      poisoned = static_cast<const Enemy&>(*a).Poisoned();
+      chilled = static_cast<const Enemy&>(*a).Chilled();
+    } else if (a->Kind() == ActorKind::Boss) {
+      poisoned = static_cast<const Boss&>(*a).Poisoned();
+    }
+    const Rect b = a->Bounds();
+    const float x = std::floor(b.Right() / 2.f) * 2.f, y = b.y - 6.f;
+    if (poisoned) {
+      gfx.FillRect(x - 2.f, y - 6.f, 4.f, 2.f, Hex(0x6fe08a));
+      gfx.FillRect(x - 4.f, y - 4.f, 8.f, 6.f, Hex(0x3a9a4a));
+      gfx.FillRect(x - 2.f, y - 2.f, 2.f, 2.f, Hex(0xd8ffe0));
+    }
+    if (chilled) {
+      const float cx = x - (poisoned ? 12.f : 0.f);
+      gfx.FillRect(cx - 4.f, y - 2.f, 8.f, 2.f, Hex(0x9ff0ff));
+      gfx.FillRect(cx - 1.f, y - 5.f, 2.f, 8.f, Hex(0x9ff0ff));
+      gfx.FillRect(cx - 1.f, y - 2.f, 2.f, 2.f, Hex(0xffffff));
     }
   }
   // 저주 표식: 머리 위에 작은 보라 눈
@@ -149,8 +320,33 @@ void World::Render(Graphics& gfx) const {
     gfx.FillRect(x - 4.f, y + 2.f, 8.f, 2.f, Hex(0xc58bff));
     gfx.FillRect(x - 1.f, y + 1.f, 2.f, 4.f, Hex(0xff5ca8));
   }
+  // 정예 적 체력 바와 스킬 예고 "!"
+  for (const auto& a : actors_) {
+    if (a->IsDead() || a->Kind() != ActorKind::Enemy) continue;
+    const Enemy& e = static_cast<const Enemy&>(*a);
+    if (!e.Elite()) continue;
+    const Rect b = e.Bounds();
+    if (e.Warn() > 0 && (e.Warn() / 3) % 2 == 0) gfx.Text("!", b.Center().x, b.y - 52.f, 4, Hex(0xff4a5a), Align::Center);
+    const float w = 36.f, x = std::floor(b.Center().x - w * 0.5f), y = b.y - 22.f;
+    gfx.FillRect(x - 2.f, y - 2.f, w + 4.f, 8.f, Hex(0x1a0b2e));
+    gfx.FillRect(x, y, std::floor(w * static_cast<float>(e.Hp()) / static_cast<float>(e.MaxHp()) / 2.f) * 2.f, 4.f, Hex(0xffc93c));
+  }
   fx_.Render(gfx);
   gfx.SetOffset(0.f, 0.f);
+  if (arena_ >= 0) {  // 결투장: 화면 가장자리가 붉게 맥박친다. 제한 시간 5초 안쪽이면 더 진하고 빠르게
+    const bool hurry = arenaClock_ > 0 && arenaClock_ <= 300;
+    const float pulse = 0.5f + 0.5f * std::sin(static_cast<float>(frame_) * (hurry ? 0.3f : 0.08f));
+    const int a0 = static_cast<int>((hurry ? 110.f : 55.f) * pulse);
+    const float W = static_cast<float>(cfg::kScreenW), H = static_cast<float>(cfg::kScreenH);
+    for (int i = 0; i < 4; ++i) {
+      const float d = static_cast<float>(i) * 6.f;
+      const Color c = Rgb(255, 40, 70, a0 / (i + 1));
+      gfx.FillRect(0, d, W, 6, c);
+      gfx.FillRect(0, H - d - 6.f, W, 6, c);
+      gfx.FillRect(d, 0, 6, H, c);
+      gfx.FillRect(W - d - 6.f, 0, 6, H, c);
+    }
+  }
   if (timeStop_ > 0) {  // 나이트메어: 화면을 보랏빛 흑백처럼 덮고, 끝나기 직전에 깜빡인다
     const int a = timeStop_ < 30 && (timeStop_ / 3) % 2 ? 40 : 90;
     gfx.FillRect(0, 0, static_cast<float>(cfg::kScreenW), static_cast<float>(cfg::kScreenH), Rgb(40, 0, 60, a));
@@ -211,17 +407,17 @@ void World::OnEnemyKilled() {
   }
 }
 
-// 나이트메어가 끝나는 순간: 화면 안 모든 적에게 8, 보스에게 30 (필살기 위력 배율 적용)
+// 나이트메어가 끝나는 순간: 화면 안 모든 적에게 80, 보스에게 300 (필살기 위력 배율 적용)
 void World::EndTimeStop() {
   const Session& s = ctx_.session;
   const float mul = stats::UltMultiplier(s);
-  DamageInfo info{8.f * mul, 1, false, true};
+  DamageInfo info{80.f * mul, 1, false, true};
   info.fromPlayer = true;
   const Rect view{camera_.x - 40.f, 0.f, static_cast<float>(cfg::kScreenW) + 80.f, static_cast<float>(cfg::kScreenH)};
   ForEach(ActorKind::Enemy, [&](Actor& a) {
     if (a.Bounds().Overlaps(view)) static_cast<Enemy&>(a).TakeDamage(*this, info);
   });
-  if (boss_ && !boss_->dying) { info.amount = 30.f * mul; boss_->TakeDamage(*this, info); }
+  if (boss_ && !boss_->dying) { info.amount = 300.f * mul; boss_->TakeDamage(*this, info); }
   fx_.Flash();
   fx_.Shake(14.f);
   fx_.AddRing(player_->Bounds().Center());

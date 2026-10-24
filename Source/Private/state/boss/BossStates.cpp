@@ -130,8 +130,9 @@ class SummonState : public BossStateBase {
     b.charge = std::min(1.f, static_cast<float>(t_) / 32.f);
     if (t_ == 32) {
       if (w.CountAlive(ActorKind::Enemy) < 4) {
-        w.Spawn<Bat>(Vec2{200.f, 140.f}, w.StageIndex(), 180.f);
-        w.Spawn<Bat>(Vec2{kW - 230.f, 140.f}, w.StageIndex(), 180.f);
+        // 소환 박쥐는 순찰하지 않고 플레이어를 향해 천천히(1.7px/프레임) 날아온다
+        w.Spawn<Bat>(Vec2{200.f, 140.f}, w.StageIndex(), 180.f)->MakeChaser(1.7f);
+        w.Spawn<Bat>(Vec2{kW - 230.f, 140.f}, w.StageIndex(), 180.f)->MakeChaser(1.7f);
         w.Fx().Burst({200.f, 140.f}, 14, Hex(0xff6a8a), 4.f);
         w.Fx().Burst({kW - 230.f, 140.f}, 14, Hex(0xff6a8a), 4.f);
         w.Snd().Play(Sfx::BossSummon);

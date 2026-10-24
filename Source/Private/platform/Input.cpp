@@ -24,6 +24,7 @@ const std::array<std::vector<SDL_Scancode>, static_cast<size_t>(Action::Count)>&
       {SDL_SCANCODE_C},                                              // Skip (시네마틱에서 꾹 누르면 건너뛰기)
       {SDL_SCANCODE_X, SDL_SCANCODE_LSHIFT},                         // Dash (왼쪽 Shift = 새끼손가락 대안)
       {SDL_SCANCODE_R},                                              // Reroll (카드 다시 뽑기)
+      {SDL_SCANCODE_TAB},                                            // Status (능력치·카드 창)
   }};
   return table;
 }
@@ -31,6 +32,11 @@ const std::array<std::vector<SDL_Scancode>, static_cast<size_t>(Action::Count)>&
 }  // namespace
 
 void Input::OnEvent(const SDL_Event& e) {
+  if (e.type == SDL_MOUSEMOTION) {  // 논리 크기(SDL_RenderSetLogicalSize)를 쓰므로 이벤트 좌표가 곧 게임 화면 좌표다
+    mouse_ = {static_cast<float>(e.motion.x), static_cast<float>(e.motion.y)};
+    mouseSeen_ = true;
+    return;
+  }
   if (e.type != SDL_KEYDOWN || e.key.repeat != 0) return;
   const auto& table = Bindings();
   for (int a = 0; a < kCount; ++a) {

@@ -62,11 +62,11 @@ void DrawCharacterPanel(Graphics& g, const Session& s, float x, float y, float w
       {CardId::AttackUp, "ATK", std::to_string(static_cast<int>(stats::Damage(s)))},
       {CardId::FireRate, "RATE", Fmt1(60.f / static_cast<float>(stats::FireCooldown(s))) + "/S"},
       {CardId::MultiShot, "SHOT", "X" + std::to_string(stats::ShotCount(s))},
-      {CardId::RangeUp, "RANGE", std::to_string(static_cast<int>(stats::ShotSpeed(s) * static_cast<float>(stats::ShotLife(s))))},
+      {CardId::RangeUp, "RANGE", std::to_string(stats::ShotRange(s))},
       {CardId::MaxHeart, "HEART", std::to_string(stats::MaxHp(s))},
       {CardId::ExtraLife, "LIFE", std::to_string(s.lives)},
       {CardId::MoveSpeed, "SPEED", Fmt1(stats::MoveSpeed(s))},
-      {CardId::AirJump, "AIR JUMP", std::to_string(stats::AirJumps(s))},
+      {CardId::AirJump, "2X JUMP", std::to_string(stats::AirJumps(s))},
       {CardId::DashCharge, "DASH", std::to_string(stats::DashCharges(s))},
       {CardId::GaugeUp, "GAUGE", "X" + Fmt1(stats::GaugeMultiplier(s))},
   };

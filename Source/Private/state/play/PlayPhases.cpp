@@ -32,6 +32,7 @@ class PlayingPhase : public PlayPhase {
     Game& game = m.GetGame();
     World& world = m.GetWorld();
     if (game.In().Pressed(Action::Pause)) { m.Phase().Change(MakePausedPhase()); return; }
+    if (game.In().Pressed(Action::Status)) { m.Phase().Change(MakeStatusPhase()); return; }
 
     world.Update();
 
@@ -66,7 +67,7 @@ class CardPickPhase : public PlayPhase {
       case CardPicker::Result::Picked:
         ApplyCard(game.Sess(), picker_.Choice(), &world.GetPlayer());
         // 그림자 분신은 스테이지 시작 때 만들어지므로, 스테이지 중에 얻으면 여기서 바로 불러낸다
-        if (picker_.Choice() == CardId::Familiar) world.Spawn<Familiar>(world.GetPlayer().Bounds().Center());
+        if (picker_.Choice() == CardId::Familiar) world.Spawn<Familiar>(world.GetPlayer().Bounds().Center(), game.Sess().Card(CardId::Familiar) - 1);
         break;
     }
     world.ConsumePick();

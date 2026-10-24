@@ -12,7 +12,7 @@ namespace gengar {
 
 class Player;
 
-inline constexpr int kCardDrawCost = 50;  // 상점 카드 뽑기 1회 가격 (고정)
+inline constexpr int kCardDrawCost = 50;  // 상점 카드 뽑기 첫 가격 (그 판에서 뽑을 때마다 +25, ShopMode::DrawCost)
 
 enum class Grade { Common, Rare, Epic, Legend };
 enum class CardCategory { Attack, Defense, Move, Dash, Ult, Utility };
@@ -30,6 +30,8 @@ struct CardDef {
 };
 
 const CardDef& GetCard(CardId id);
+// 능력치 창에서 마우스를 올리면 보여 주는 자세한 설명 (수치 포함, 영문 대문자)
+const char* CardDetail(CardId id);
 const std::vector<CardDef>& AllCards();
 
 const char* GradeName(Grade g);

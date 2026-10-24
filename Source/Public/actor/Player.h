@@ -8,6 +8,8 @@
 
 namespace gengar {
 
+struct Session;
+
 class Player : public Character {
  public:
   Player(Vec2 pos, int maxHp);
@@ -31,12 +33,14 @@ class Player : public Character {
 
   // 지금 카드 능력이 모두 반영된 섀도우볼 한 발 (분신도 이걸 쓴다)
   ShotSpec MakeShot(const World& world) const;
+  static float SpreadY(int i, int n, const Session& s);  // 부채꼴 i번째 공의 세로 속도 (분신도 쓴다)
 
   // HUD 표시용
   int DashReady() const { return std::max(0, charges_); }
   float DashRefill(const World& world) const;  // 다음 칸이 차는 정도 0~1
   float ChargeRatio() const;                   // 차지샷 모으는 정도 0~1 (최대 단계까지)
   int ChargeTier() const;                      // 차지샷 지금 단계 0~4 (0 = 아직 안 모임)
+  bool BeamActive() const { return beam_ > 0; } // 혈사포를 쏘는 중
 
  private:
   void Defeat(World& world);
@@ -45,6 +49,10 @@ class Player : public Character {
   void UpdateRain(World& world);
   void UpdateDashSkills(World& world);
   void DrawRushSlash(Graphics& gfx, Vec2 center) const;  // 그림자 돌진 칼날 연출
+  void UpdateBrimstone(World& world);   // 혈사포: 모으기 -> 굵은 핏빛 광선
+  void UpdateOrbit(World& world);       // 그림자 궤도: 몸 주위를 도는 구슬
+  void DrawBrimstone(Graphics& gfx) const;
+  void DrawLooks(Graphics& gfx, const World& world, Vec2 center, bool front) const;  // 카드로 생긴 겉모습 (뿔, 날개, 궤도 구슬)
   void CheckHazards(World& world);
   bool TryStartDash(World& world);  // 대시 칸이 남아 있고 공중 대시 횟수를 넘지 않았으면 시작
   bool LastStand(const World& world) const;
@@ -63,6 +71,15 @@ class Player : public Character {
   bool shield_ = false;     // 그림자 보호막: 피해 1번을 막는다 (스테이지마다)
   bool shootHeld_ = false;  // 차지샷: 직전 프레임에 공격 키를 누르고 있었나
   int charge_ = 0;          // 차지샷: 누르고 있던 프레임
+  int brim_ = 0;            // 혈사포: 모은 프레임
+  int beam_ = 0;            // 혈사포: 광선 남은 프레임
+  int beamDir_ = 1;
+  mutable int extraShots_ = 0;  // 그리기용: 멀티샷 추가 발 수 (광선 굵기)
+  float beamY_ = 0.f;
+  float orbitAngle_ = 0.f;  // 그림자 궤도 구슬 각도
+  int flight_ = -1;         // 그림자 날개: 남은 비행 프레임 (-1 = 첫 프레임에 가득 채운다)
+  bool flying_ = false;     // 이번 프레임에 날고 있다 (날갯짓 연출)
+  std::vector<std::pair<const Actor*, int>> orbitHits_;  // 구슬이 최근에 때린 적과 그 프레임 (같은 적은 0.3초 간격)
   int rainTimer_ = 0;       // 섀도우 레인 필살기 남은 프레임
   Vec2 squash_{1.f, 1.f};  // 스쿼시/스트레치 배율 (가로, 세로). 매 프레임 1로 돌아간다.
 

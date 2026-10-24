@@ -18,6 +18,12 @@ struct ShotSpec {
   bool curse = false;      // 맞은 적이 2초 동안 받는 피해 2배 (같은 적은 15초 쿨타임)
   bool fragment = false;   // 분열 조각: 다시 폭발/분열하지 않는다 (연쇄 방지)
   bool charged = false;    // 차지샷 (크고 밝게 그린다)
+  bool laser = false;      // 레이저: 빠르고 가늘게 그린다
+  bool wave = false;       // 웨이브: 날아가는 방향의 옆으로 출렁인다
+  bool boomerang = false;  // 부메랑: 사거리 절반에서 플레이어에게 돌아온다
+  bool poison = false;
+  bool frost = false;
+  bool chain = false;      // 연쇄 번개: 맞힐 때 가까운 다른 적에게 50%
   bool ultimate = false;   // 필살기 탄: 게이지 충전과 치명타 없음
   float crit = 0.f;        // 치명타(2배) 확률
   float knockback = 0.f;
@@ -42,6 +48,7 @@ class ShadowBall : public Actor {
   void Hit(World& w, Actor& target);  // 피해 + 폭발/분열 처리
   void Split(World& w, Vec2 at, Vec2 dir, const Actor* ignore);
   void UseBounce();
+  void Zap(World& w, const Actor& from, float damage);  // 연쇄 번개
 
   ShotSpec spec_;
   int life_;
@@ -53,6 +60,8 @@ class ShadowBall : public Actor {
   int rehit_ = 0;            // >0: 튕긴 뒤 남은 프레임. 0이 되면 맞힌 목록을 비운다
   bool bouncy_ = false;      // 튕기는 탄 카드가 있었나 (분열 조각에 튕김을 물려준다)
   bool splitDone_ = false;
+  bool returning_ = false;   // 부메랑: 돌아오는 중
+  Vec2 waveShift_{};         // 웨이브: 지금 중심선에서 옆으로 벗어난 만큼
 };
 
 }  // namespace gengar

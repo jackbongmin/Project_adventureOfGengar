@@ -15,6 +15,9 @@ struct DamageInfo {
   bool crit = false;        // 치명타 (노란 숫자)
   bool curse = false;       // 맞은 대상에 저주 표식 (2초 동안 받는 피해 2배, 같은 대상은 15초 쿨타임)
   float knockback = 0.f;    // 넉백 속도 (일반 적만)
+  bool poison = false;      // 독: 3초 동안 0.5초마다 이번 피해의 25%
+  bool frost = false;       // 냉기: 2초 동안 이동 속도 절반 (보스 제외)
+  bool dot = false;         // 독 같은 지속 피해 (게이지 충전 없음, 다시 독을 걸지 않음)
 };
 
 class IDamageable {

@@ -691,6 +691,205 @@ const std::vector<std::string>& IconCrackedHeart() {
   return rows;
 }
 
+// ---- 0.4.2 새 카드 ----
+const std::vector<std::string>& IconBrimstone() {
+  static const std::vector<std::string> rows = {
+      "............",
+      "..r......r..",
+      "..rr....rr..",
+      "...rrrrrr...",
+      "............",
+      "rrrrrrrrrrrr",
+      "rRRRRRRRRRRr",
+      "RWWWWWWWWWWR",
+      "rRRRRRRRRRRr",
+      "rrrrrrrrrrrr",
+      "............",
+      "............",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconLaser() {
+  static const std::vector<std::string> rows = {
+      "............",
+      "............",
+      "............",
+      "kk..........",
+      "kKKKKKKKKKKk",
+      "KwwwwwwwwwwK",
+      "kKKKKKKKKKKk",
+      "kk..........",
+      "............",
+      "............",
+      "............",
+      "............",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconBoomerang() {
+  static const std::vector<std::string> rows = {
+      "............",
+      "....yyyy....",
+      "..yyhhhyy...",
+      ".yhh....y...",
+      ".yh.........",
+      "yh..........",
+      "yh......o...",
+      "yh.....oyo..",
+      ".yh...oyyyo.",
+      ".yhhhhyyyyy.",
+      "..yyyyyyyy..",
+      "............",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconWaveShot() {
+  static const std::vector<std::string> rows = {
+      "............",
+      "............",
+      ".pp.....pp..",
+      "p..p...p..p.",
+      "....p.p....p",
+      ".....p......",
+      "............",
+      "...ww.......",
+      "..wpw.......",
+      "...ww.......",
+      "............",
+      "............",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconScatter() {
+  static const std::vector<std::string> rows = {
+      "............",
+      "........pp..",
+      "...pp...pw..",
+      "...pw.......",
+      "pp.......pp.",
+      "pw.......pw.",
+      "...pp.......",
+      "...pw...pp..",
+      "........pw..",
+      "............",
+      "............",
+      "............",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconHeavyShot() {
+  static const std::vector<std::string> rows = {
+      "............",
+      "...oooooo...",
+      "..ommmmmmo..",
+      ".ommppppmmo.",
+      ".ompppwwpmo.",
+      ".omppppwpmo.",
+      ".ompppppmmo.",
+      ".ommppppmmo.",
+      "..ommmmmmo..",
+      "...oooooo...",
+      "............",
+      "............",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconPoison() {
+  static const std::vector<std::string> rows = {
+      "............",
+      ".....oo.....",
+      "....ogo.....",
+      "....oggo....",
+      "...ogggo....",
+      "..ogggggo...",
+      "..oggwggo...",
+      "..ogwgggo...",
+      "..ogggggo...",
+      "...ogggo....",
+      "....ooo.....",
+      "............",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconFrost() {
+  static const std::vector<std::string> rows = {
+      "............",
+      ".....c......",
+      "..c..c..c...",
+      "...c.c.c....",
+      "....ccc.....",
+      ".ccccwcccc..",
+      "....ccc.....",
+      "...c.c.c....",
+      "..c..c..c...",
+      ".....c......",
+      "............",
+      "............",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconChain() {
+  static const std::vector<std::string> rows = {
+      "............",
+      ".......yy...",
+      "......yy....",
+      ".....yy.....",
+      "....yyyyy...",
+      "......yy....",
+      ".....yy.....",
+      "....yy......",
+      "...yy.......",
+      "..yh........",
+      "............",
+      "............",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconOrbit() {
+  static const std::vector<std::string> rows = {
+      "............",
+      "....ssss....",
+      "..ss....ss..",
+      ".s........s.",
+      "cw...pp...s.",
+      "cc..pwpp..s.",
+      ".s..pppp..s.",
+      ".s...pp...cw",
+      "..ss....sscc",
+      "....ssss....",
+      "............",
+      "............",
+  };
+  return rows;
+}
+
+const std::vector<std::string>& IconBigWings() {
+  static const std::vector<std::string> rows = {
+      "............",
+      "p..........p",
+      "pm........mp",
+      "pmm..oo..mmp",
+      "pmmmowwommmp",
+      "pmppowwoppmp",
+      ".pmppoopppm.",
+      ".pmpp..ppmp.",
+      "..pmp..pmp..",
+      "..pp....pp..",
+      "...p....p...",
+      "............",
+  };
+  return rows;
+}
+
 }  // namespace
 
 // 카드별 아이콘. 비슷한 카드는 같은 아이콘을 함께 쓴다 (* = 예전 상점 아이콘 재사용).
@@ -712,6 +911,16 @@ const std::vector<std::string>& CardIconRows(CardId id) {
     case CardId::Homing: return IconTarget();
     case CardId::Split: return IconSplit();
     case CardId::ChargeShot: return IconCharge();
+    case CardId::Brimstone: return IconBrimstone();
+    case CardId::Laser: return IconLaser();
+    case CardId::Boomerang: return IconBoomerang();
+    case CardId::WaveShot: return IconWaveShot();
+    case CardId::Scatter: return IconScatter();
+    case CardId::HeavyShot: return IconHeavyShot();
+    case CardId::Poison: return IconPoison();
+    case CardId::Frost: return IconFrost();
+    case CardId::Chain: return IconChain();
+    case CardId::Orbit: return IconOrbit();
     case CardId::MaxHeart: return IconMaxHp();
     case CardId::Heal: return IconHealHeart();
     case CardId::LongGuard: return IconClock();
@@ -723,6 +932,7 @@ const std::vector<std::string>& CardIconRows(CardId id) {
     case CardId::JumpUp: return IconDoubleJump();
     case CardId::AirJump: return IconDoubleJump();
     case CardId::Float: return IconFeather();
+    case CardId::Wings: return IconBigWings();
     case CardId::DashRange: return IconDashLines();
     case CardId::DashRecharge: return IconClock();
     case CardId::DashCharge: return IconDashSlots();

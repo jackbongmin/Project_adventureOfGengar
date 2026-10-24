@@ -11,14 +11,25 @@ namespace gengar {
 
 class World;
 
-enum class Tile : uint8_t { Empty = 0, Ground = 1, Brick = 2, Spike = 3, Crumble = 4, OneWay = 5 };  // OneWay: 공중에 뜬 발판. 아래에서 뛰어오르면 통과하고 위에서만 밟힌다.
+// OneWay: 공중에 뜬 발판. 아래에서 뛰어오르면 통과하고 위에서만 밟힌다.
+// Barrier: 매복 결투장이 진행되는 동안만 생기는 마법 벽 (World 가 놓고 치운다).
+// Spring: 점프 버섯. 플레이어가 위에 내려앉으면 높이 튀어 오른다.
+enum class Tile : uint8_t { Empty = 0, Ground = 1, Brick = 2, Spike = 3, Crumble = 4, OneWay = 5, Barrier = 6, Spring = 7 };
 
-enum class SpawnType { Slime, Bat, Hound, Caster, Boss, Coin, Heart };
+enum class SpawnType { Slime, Bat, Hound, Caster, Hopper, Boss, Coin, Heart, Chest };
 
 struct SpawnPoint {
   SpawnType type;
-  Vec2 pos;          // Slime/Hound/Caster/Bat = 좌상단, Coin/Heart/Boss = 중심
+  Vec2 pos;          // Slime/Hound/Caster/Bat/Hopper = 좌상단, Coin/Heart/Boss/Chest = 중심
   float range = 0.f;  // Bat 순찰 범위
+  bool elite = false;  // 정예: 체력 3배, 빛나는 테두리, 경험치·코인 많이
+};
+
+// 매복 결투장: 플레이어가 c0~c1 열 안쪽으로 들어오면 양 끝 열에 마법 벽이 생기고 적이 웨이브로 나온다.
+// 웨이브를 모두 잡으면 벽이 사라지고 가운데에 보물상자가 떨어진다. 폭은 화면 한 장(30칸)에 맞춘다.
+struct ArenaDef {
+  int c0 = 0, c1 = 0;
+  std::vector<std::vector<SpawnPoint>> waves;
 };
 
 // 밟으면 잠시 뒤 떨어지고, 시간이 지나면 복구되는 발판 묶음(가로로 이어진 타일들)
@@ -47,6 +58,8 @@ class Level {
 
   std::vector<SpawnPoint>& Spawns() { return spawns_; }
   const std::vector<SpawnPoint>& Spawns() const { return spawns_; }
+  std::vector<ArenaDef>& Arenas() { return arenas_; }
+  const std::vector<ArenaDef>& Arenas() const { return arenas_; }
 
   void SetFlag(const Rect& r) { flag_ = r; hasFlag_ = true; }
   bool HasFlag() const { return hasFlag_; }
@@ -62,6 +75,7 @@ class Level {
   std::string name_;
   std::vector<Tile> tiles_;
   std::vector<SpawnPoint> spawns_;
+  std::vector<ArenaDef> arenas_;
   Rect flag_;
   bool hasFlag_ = false;
   std::vector<CrumbleGroup> crumbles_;

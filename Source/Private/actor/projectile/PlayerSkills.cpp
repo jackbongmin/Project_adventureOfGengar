@@ -8,6 +8,7 @@
 #include "actor/enemy/Enemy.h"
 #include "actor/projectile/ShadowBall.h"
 #include "core/Random.h"
+#include "data/PlayerStats.h"
 #include "platform/Audio.h"
 #include "platform/Graphics.h"
 #include "world/World.h"
@@ -102,20 +103,28 @@ void BlackHole::Render(Graphics& g, const World&) {
 }
 
 // ---------------------------------------------------------------- Familiar
-Familiar::Familiar(Vec2 center) : Actor(ActorKind::Player) { pos = center; }
+// 여러 마리면 쏘는 때를 16프레임씩 엇갈려 한꺼번에 몰리지 않게 한다
+Familiar::Familiar(Vec2 center, int index) : Actor(ActorKind::Player), cooldown_(kFireFrames + 16 * index), index_(index) { pos = center; }
 
 void Familiar::Update(World& w) {
   ++t_;
   const Player& p = w.GetPlayer();
   if (!p.IsAlive()) return;
   const Vec2 pc = p.Bounds().Center();
-  const Vec2 want{pc.x - static_cast<float>(p.Facing()) * 30.f, pc.y - 30.f + std::sin(static_cast<float>(t_) * 0.08f) * 4.f};
-  pos += (want - pos) * 0.12f;
+  // 플레이어 뒤로 26px 간격 한 줄. 뒤쪽 분신일수록 조금 늦게 따라와 꼬리처럼 흔들린다
+  const float back = 30.f + 26.f * static_cast<float>(index_);
+  const Vec2 want{pc.x - static_cast<float>(p.Facing()) * back, pc.y - 30.f + std::sin(static_cast<float>(t_) * 0.08f + static_cast<float>(index_) * 0.9f) * 4.f};
+  pos += (want - pos) * (0.12f - 0.025f * static_cast<float>(index_));
   facing_ = p.Facing();
-
   if (--cooldown_ > 0) return;
+  cooldown_ = Volley(w) ? kFireFrames : 10;  // 쏠 적이 없으면 잠깐 뒤 다시 본다
+}
+
+bool Familiar::Volley(World& w) {
+  const Player& p = w.GetPlayer();
+  if (!p.IsAlive()) return false;
   const Actor* best = nullptr;
-  float bestD = 380.f;
+  float bestD = 420.f;
   auto consider = [&](const Actor& a) {
     const Vec2 c = a.Bounds().Center();
     const float d = std::hypot(c.x - pos.x, c.y - pos.y);
@@ -123,16 +132,21 @@ void Familiar::Update(World& w) {
   };
   w.ForEach(ActorKind::Enemy, consider);
   if (const Boss* boss = w.GetBoss(); boss && boss->IsAlive() && !boss->dying && !boss->invulnerable) consider(*boss);
-  if (!best) { cooldown_ = 10; return; }
-  ShotSpec spec = p.MakeShot(w);  // 내 공의 카드 능력을 그대로 쓰고, 크기와 피해만 절반
+  if (!best) return false;
+  ShotSpec spec = p.MakeShot(w);  // 내 공의 카드 능력을 그대로 쓰고, 크기 70%·피해 50%
   spec.damage *= 0.5f;
   spec.radius = std::max(5.f, spec.radius * 0.7f);
   spec.charged = false;
-  const Vec2 c = best->Bounds().Center();
-  const float a = std::atan2(c.y - pos.y, c.x - pos.x), speed = 7.f;
-  w.SpawnPooled<ShadowBall>(pos, Vec2{std::cos(a) * speed, std::sin(a) * speed}, spec);
-  facing_ = c.x >= pos.x ? 1 : -1;
-  cooldown_ = kFireFrames;
+  const float aim = std::atan2(best->Bounds().Center().y - pos.y, best->Bounds().Center().x - pos.x);
+  const float speed = spec.laser ? 18.f : 7.f;
+  const int n = stats::ShotCount(w.Sess());
+  for (int i = 0; i < n; ++i) {
+    // 내 부채꼴과 같은 벌어짐을 조준 방향 기준으로 돌려서 쓴다
+    const float a = aim + std::atan2(Player::SpreadY(i, n, w.Sess()), speed);
+    w.SpawnPooled<ShadowBall>(pos, Vec2{std::cos(a) * speed, std::sin(a) * speed}, spec);
+  }
+  facing_ = std::cos(aim) >= 0.f ? 1 : -1;
+  return true;
 }
 
 void Familiar::Render(Graphics& g, const World&) {

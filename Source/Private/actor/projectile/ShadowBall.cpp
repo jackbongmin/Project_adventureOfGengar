@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "actor/PhantomArt.h"
+#include "actor/Player.h"
 #include "actor/boss/Boss.h"
 #include "actor/enemy/Enemy.h"
 #include "core/Config.h"
@@ -97,6 +98,8 @@ void ShadowBall::Hit(World& w, Actor& target) {
   info.crit = crit;
   info.curse = spec_.curse;
   info.knockback = spec_.knockback;
+  info.poison = spec_.poison;
+  info.frost = spec_.frost;
   if (target.Kind() == ActorKind::Boss) {
     info.amount *= spec_.bossScale;
     static_cast<Boss&>(target).TakeDamage(w, info);
@@ -104,6 +107,7 @@ void ShadowBall::Hit(World& w, Actor& target) {
     static_cast<Enemy&>(target).TakeDamage(w, info);
   }
 
+  if (spec_.chain) Zap(w, target, dmg * 0.5f);
   if (spec_.fragment) return;
   if (spec_.burst) {  // 폭발: 주변 적에게 50%
     DamageInfo splash = info;
@@ -125,6 +129,31 @@ void ShadowBall::Hit(World& w, Actor& target) {
   Split(w, pos, vel, target.Kind() == ActorKind::Boss ? nullptr : &target);
 }
 
+// 연쇄 번개: from 을 뺀 가장 가까운 적(또는 보스) 하나에게 번개. 가는 길에 하늘색 도트가 튄다
+void ShadowBall::Zap(World& w, const Actor& from, float damage) {
+  const Vec2 a = from.Bounds().Center();
+  Actor* best = nullptr;
+  float bestD = 170.f;
+  auto consider = [&](Actor& t) {
+    if (&t == &from || !Hittable(t)) return;
+    const Vec2 c = t.Bounds().Center();
+    const float d = std::hypot(c.x - a.x, c.y - a.y);
+    if (d < bestD) { bestD = d; best = &t; }
+  };
+  w.ForEach(ActorKind::Enemy, consider);
+  if (Boss* boss = w.GetBoss()) consider(*boss);
+  if (!best) return;
+  const Vec2 b = best->Bounds().Center();
+  for (int k = 1; k <= 7; ++k) {  // 지그재그 번개 자국
+    const float t = static_cast<float>(k) / 8.f;
+    w.Fx().Burst({a.x + (b.x - a.x) * t + RandRange(-6.f, 6.f), a.y + (b.y - a.y) * t + RandRange(-6.f, 6.f)}, 2, Hex(0x9ff0ff), 1.f, 10.f);
+  }
+  DamageInfo info{damage, b.x >= a.x ? 1 : -1};
+  info.fromPlayer = true;
+  if (best->Kind() == ActorKind::Boss) static_cast<Boss&>(*best).TakeDamage(w, info);
+  else static_cast<Enemy&>(*best).TakeDamage(w, info);
+}
+
 // 튕김 한 번을 쓰고, 조금 뒤에는 이미 맞힌 적(보스 포함)도 다시 맞힐 수 있게 한다
 void ShadowBall::UseBounce() {
   --spec_.bounces;
@@ -139,6 +168,25 @@ void ShadowBall::Update(World& w) {
   pos += vel;
   ++age_;
   const Color puff = Hex(0x9a5cff);
+  const Vec2 prevShift = waveShift_;
+  if (spec_.wave) {  // 웨이브: 진행 방향의 수직으로 사인파만큼 옮긴다 (진폭 16px, 화면 위쪽부터)
+    const float sp = std::max(1.f, std::hypot(vel.x, vel.y));
+    const Vec2 perp{-vel.y / sp, vel.x / sp};
+    const float flip = perp.y > 0.f ? -1.f : 1.f;  // 처음에는 위로 출렁인다 (바닥 가까이에서 쏴도 땅에 박히지 않게)
+    waveShift_ = perp * (flip * std::sin(static_cast<float>(age_) * 0.3f) * 16.f);
+    pos += waveShift_ - prevShift;
+  }
+  if (spec_.boomerang) {  // 부메랑: 사거리 절반에서 돌아서 플레이어에게 날아온다. 돌아오는 길에는 다시 맞힐 수 있다
+    const Vec2 pc = w.GetPlayer().Bounds().Center();
+    const float sp = std::max(4.f, std::hypot(vel.x, vel.y));
+    if (!returning_ && life_ <= spec_.life / 2) { returning_ = true; hitCount_ = 0; life_ = std::max(life_, 90); }
+    if (returning_) {
+      const Vec2 to = pc - pos;
+      const float d = std::max(1.f, std::hypot(to.x, to.y));
+      vel = {to.x / d * sp, to.y / d * sp};
+      if (d < 20.f) { Kill(); return; }
+    }
+  }
   if (--life_ <= 0) { w.Fx().Burst(pos, 6, puff, 2.f, 14.f); Kill(); return; }
   if (rehit_ > 0 && --rehit_ == 0) hitCount_ = 0;
 
@@ -149,11 +197,13 @@ void ShadowBall::Update(World& w) {
     const int c = static_cast<int>(std::floor(x / T)), r = static_cast<int>(std::floor(y / T));
     return lv.Solid(c, r) && !lv.OneWay(c, r);
   };
-  if (solid(pos.x, pos.y)) {
+  // 웨이브 공은 출렁임을 뺀 중심선으로 벽·바닥을 판단한다 (출렁임만으로 땅에 닿아 사라지지 않게)
+  const Vec2 line = pos - waveShift_, prevLine = prev - prevShift;
+  if (solid(line.x, line.y)) {
     // 어느 축으로 들어왔는지 보고 그 축의 속도를 뒤집은 방향 = 벽에서 튀어나오는 방향
     Vec2 out = vel;
-    if (!solid(prev.x, pos.y)) out.x = -out.x;
-    else if (!solid(pos.x, prev.y)) out.y = -out.y;
+    if (!solid(prevLine.x, line.y)) out.x = -out.x;
+    else if (!solid(line.x, prevLine.y)) out.y = -out.y;
     else out = {-out.x, -out.y};
     Split(w, prev, out, nullptr);  // 분열탄은 벽에 닿아도 갈라진다
     if (spec_.bounces <= 0) {
@@ -201,7 +251,10 @@ void ShadowBall::Update(World& w) {
     Kill();
     return;
   }
-  if (age_ % 2 == 0) w.Fx().Trail(pos, spec_.curse ? Hex(0x5a1a7a) : Hex(0x7b3fd0), spec_.radius * 0.7f, 14.f);
+  if (age_ % 2 == 0 && !spec_.laser) {
+    const Color trail = spec_.poison ? Hex(0x3a9a4a) : spec_.frost ? Hex(0x3a8ab0) : spec_.curse ? Hex(0x5a1a7a) : Hex(0x7b3fd0);
+    w.Fx().Trail(pos, trail, spec_.radius * 0.7f, 14.f);
+  }
 }
 
 void ShadowBall::Render(Graphics& gfx, const World&) {
@@ -213,6 +266,17 @@ void ShadowBall::Render(Graphics& gfx, const World&) {
     gfx.PixelRing(origin_.x, origin_.y, spec_.radius * 0.8f + t * 3.f, 3.f, Rgb(225, 190, 255, static_cast<int>((1.f - k) * 220.f)), 3.f);
   }
   if (spec_.charged) gfx.Glow(pos.x, pos.y, r * 2.2f, Rgb(255, 226, 122, 90));
+  if (spec_.laser) {  // 레이저: 지나온 길을 따라 늘어진 빛줄기 (바깥 분홍, 가운데 흰색)
+    const float sp = std::max(1.f, std::hypot(vel.x, vel.y));
+    const Vec2 d{vel.x / sp, vel.y / sp};
+    const float len = std::min(sp * 4.f, static_cast<float>(age_) * sp);
+    gfx.PixelLine(pos - d * len, pos, std::max(4.f, r * 1.1f), Rgb(255, 90, 200, 170), 2.f);
+    gfx.PixelLine(pos - d * (len * 0.8f), pos, std::max(2.f, r * 0.45f), Hex(0xffffff), 2.f);
+    gfx.Glow(pos.x, pos.y, r * 1.6f, Rgb(255, 120, 220, 80));
+    return;
+  }
+  if (spec_.poison) gfx.Glow(pos.x, pos.y, r * 1.8f, Rgb(90, 230, 110, 70));
+  if (spec_.frost) gfx.Glow(pos.x, pos.y, r * 1.8f, Rgb(120, 220, 255, 70));
   // 잔상: 오래된 것부터 그려서 본체가 맨 위에 오게 한다
   for (int k = kGhosts; k >= 1; --k) {
     const int back = k * kGhostStride;

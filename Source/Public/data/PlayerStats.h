@@ -11,21 +11,24 @@ namespace gengar::stats {
 inline float Lv(const Session& s, CardId id) { return static_cast<float>(s.Card(id)); }
 
 // ---- 공격 ----
-// 유도탄은 맞히기 쉬운 대신 공격력 -1 (최소 1)
+// 피해는 10 단위: 기본 10, 공격력 카드 단계마다 +3 (최대 5단계 25). 예전처럼 1 -> 2 로 한 장에 두 배가 되지 않게 한다.
+// 유도탄은 맞히기 쉬운 대신 -3 (최소 7)
+inline constexpr float kBaseDamage = 10.f;
 inline float Damage(const Session& s) {
-  return std::max(1.f, 1.f + Lv(s, CardId::AttackUp) - (s.Has(CardId::Homing) ? 1.f : 0.f));
+  return std::max(7.f, kBaseDamage + 3.f * Lv(s, CardId::AttackUp) - (s.Has(CardId::Homing) ? 3.f : 0.f));
 }
-inline int ShotCount(const Session& s) { return 1 + s.Card(CardId::MultiShot); }
+inline int ShotCount(const Session& s) { return 1 + s.Card(CardId::MultiShot) + (s.Has(CardId::Scatter) ? 2 : 0); }
 // 발사 간격: 단계마다 15% 짧아진다 (24 -> 20 -> 17 -> 15 -> 13 프레임)
 inline int FireCooldown(const Session& s) {
-  return std::max(6, static_cast<int>(std::lround(24.f * std::pow(0.85f, Lv(s, CardId::FireRate)))));
+  const float heavy = s.Has(CardId::HeavyShot) ? 1.25f : 1.f;  // 무거운 공: 25% 느리게
+  return std::max(6, static_cast<int>(std::lround(24.f * heavy * std::pow(0.85f, Lv(s, CardId::FireRate)))));
 }
 inline float ShotSpeed(const Session& s) { return 8.f * (1.f + 0.2f * Lv(s, CardId::ShotSpeed)); }
 // 사거리 = 속도 x 수명. 기본 약 290px. 사거리 카드는 수명을 20%씩 늘린다.
 inline int ShotLife(const Session& s) {
   return static_cast<int>((36.f + Lv(s, CardId::AttackUp) * 3.f) * (1.f + 0.2f * Lv(s, CardId::RangeUp)));
 }
-// 공격력 단계마다 커진다. 도트 배율(반지름/4 반올림)이 2 -> 2 -> 3 -> 3 -> 4 로 바뀌고, 둘레의 빛은 단계마다 커진다.
+// 공격력 단계마다 커진다 (그림 크기 = 반지름 x 2.3: 16 -> 20 -> 24 -> 28 -> 32px).
 inline float ShotRadius(const Session& s) { return 7.f + std::min(4.f, Lv(s, CardId::AttackUp)) * 1.8f; }
 inline float CritChance(const Session& s) { return 0.15f * Lv(s, CardId::Critical); }
 inline int Pierce(const Session& s) { return s.Card(CardId::Pierce); }
@@ -33,6 +36,14 @@ inline int Pierce(const Session& s) { return s.Card(CardId::Pierce); }
 // 닫힌 보스방에서는 튕긴 공이 보스를 여러 번 맞히므로 횟수를 적게 둔다 (3/5번일 때 보스 피해가 약 4배였다).
 inline int Bounces(const Session& s) { return s.Has(CardId::Bounce) ? 1 + s.Card(CardId::Bounce) : 0; }
 inline float BounceLifeScale(const Session& s) { return s.Has(CardId::Bounce) ? 1.6f : 1.f; }
+// 실제로 쏘는 공의 수명: 기본 수명 x 튕기는 탄 1.6 x 산탄 0.55. (스테이지가 바뀌어도 카드가 있는 한 그대로)
+inline int FinalShotLife(const Session& s) {
+  return static_cast<int>(static_cast<float>(ShotLife(s)) * BounceLifeScale(s) * (s.Has(CardId::Scatter) ? 0.55f : 1.f));
+}
+// 실제 사거리(px): 속도 x 수명. 레이저는 2.6배 빠르다. 능력치 패널의 RANGE 가 이 값이다
+inline int ShotRange(const Session& s) {
+  return static_cast<int>(ShotSpeed(s) * (s.Has(CardId::Laser) ? 2.6f : 1.f) * static_cast<float>(FinalShotLife(s)));
+}
 inline float Knockback(const Session& s) { return 2.5f * Lv(s, CardId::Knockback); }  // 넉백 속도 (px/프레임)
 
 // ---- 방어 ----
@@ -48,13 +59,15 @@ inline float MoveSpeed(const Session& s) { return 3.4f + Lv(s, CardId::MoveSpeed
 inline float DashSpeed(const Session& s) { return 11.f * (1.f + 0.25f * Lv(s, CardId::DashRange)); }  // 기본 약 110px
 inline int DashCharges(const Session& s) { return 1 + s.Card(CardId::DashCharge); }
 inline int DashRecharge(const Session& s) { return static_cast<int>(36.f * (1.f - 0.2f * Lv(s, CardId::DashRecharge))); }
-inline int AirDashes(const Session& s) { return 1 + s.Card(CardId::AirDash); }
+// 공중 대시: 기본 1 + 공중 대시 카드 + 대시 칸 카드 (대시 칸을 늘리면 공중에서도 연속으로 쓸 수 있다)
+inline int AirDashes(const Session& s) { return 1 + s.Card(CardId::AirDash) + s.Card(CardId::DashCharge); }
 
 // ---- 필살기 ----
 inline float UltMultiplier(const Session& s) { return 1.f + 0.3f * Lv(s, CardId::UltPower); }
 inline float GaugeMultiplier(const Session& s) { return 1.f + 0.2f * Lv(s, CardId::GaugeUp); }
-inline float UltDamage(const Session& s) { return (6.f + Lv(s, CardId::AttackUp) * 2.f) * UltMultiplier(s); }
-inline float UltBossDamage(const Session& s) { return 20.f * UltMultiplier(s); }
+// 기본 필살기(섀도우 펄스)는 화면 안 모든 적을 치는 광역이라 낮게 둔다 (0.4.3: 60+6/단계 -> 35+3/단계, 보스 200 -> 120)
+inline float UltDamage(const Session& s) { return (35.f + Lv(s, CardId::AttackUp) * 3.f) * UltMultiplier(s); }
+inline float UltBossDamage(const Session& s) { return 120.f * UltMultiplier(s); }  // 보스 체력의 4%
 
 // ---- 특수 ----
 inline float XpMultiplier(const Session& s) { return 1.f + 0.2f * Lv(s, CardId::XpBoost); }

@@ -9,7 +9,7 @@
 
 namespace gengar {
 
-Shockwave::Shockwave(Vec2 center, float speedX) : Actor(ActorKind::EnemyShot) {
+Shockwave::Shockwave(Vec2 center, float speedX, int lifeFrames) : Actor(ActorKind::EnemyShot), life_(lifeFrames) {
   pos = center;
   vel = {speedX, 0.f};
   size = {26.f, 22.f};
@@ -17,6 +17,7 @@ Shockwave::Shockwave(Vec2 center, float speedX) : Actor(ActorKind::EnemyShot) {
 
 void Shockwave::Update(World& w) {
   pos += vel;
+  if (life_ > 0 && --life_ == 0) { w.Fx().Burst(pos, 6, Hex(0xc58bff), 2.f, 12.f); Kill(); return; }
   const float T = static_cast<float>(cfg::kTile);
   if (pos.x < T + 8.f || pos.x > w.GetLevel().PixelWidth() - T - 8.f) { Kill(); return; }
   Player& p = w.GetPlayer();

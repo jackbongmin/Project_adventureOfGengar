@@ -3,7 +3,7 @@
 
 namespace gengar {
 
-// 제자리에서 플레이어를 조준해 마법구를 쏘는 후드 마법사. (TurretController)
+// 제자리에서 플레이어를 조준해 마법구를 쏘는 후드 마법사. (TurretController) 정예는 부채꼴로 3발.
 class Caster : public Enemy {
  public:
   Caster(Vec2 pos, int stage);

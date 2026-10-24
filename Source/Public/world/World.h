@@ -128,6 +128,14 @@ class World {
   int ComboPop() const { return comboPop_; }  // 콤보가 오른 직후 HUD 글자가 커지는 연출용
   int ComboMultiplier() const { return 1 + combo_ / 5; }
 
+  // ---- 매복 결투장 ----
+  bool ArenaActive() const { return arena_ >= 0; }
+  int ArenaWave() const { return arenaWave_ + 1; }   // 지금 웨이브 (1부터)
+  int ArenaWaves() const;
+  int ArenaClock() const { return arenaClock_; }     // 이번 웨이브 남은 프레임 (0 = 제한 없음: 마지막 웨이브)
+  int ArenaClockMax() const;
+  bool ArenaSummoning() const { return arena_ >= 0 && arenaTimer_ > 0; }  // 다음 웨이브 소환 예고 중
+
   void ShowBanner(const std::string& text, int frames) { banner_ = text; bannerTimer_ = frames; }
   const std::string& Banner() const { return banner_; }
   int BannerTimer() const { return bannerTimer_; }
@@ -171,6 +179,16 @@ class World {
   int timeStop_ = 0;
 
   void EndTimeStop();
+  void SpawnFrom(const SpawnPoint& sp, int arenaTag);  // 스폰 지점 하나를 실제 액터로
+  void UpdateArenas();
+  void SetArenaWalls(const ArenaDef& a, bool on);
+
+  // 매복 결투장 진행 상태
+  int arena_ = -1;               // 진행 중인 결투장 (-1 = 없음)
+  int arenaWave_ = 0;            // 지금 싸우는(또는 곧 나올) 웨이브
+  int arenaTimer_ = 0;           // >0: 다음 웨이브가 나오기까지 남은 프레임 (바닥에 소환 마법진)
+  int arenaClock_ = 0;           // 웨이브 제한 시간: 0 이 되면 남은 적이 있어도 다음 웨이브(증원)가 나온다
+  std::vector<bool> arenaDone_;  // 끝낸 결투장
 };
 
 }  // namespace gengar

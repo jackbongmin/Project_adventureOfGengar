@@ -45,6 +45,7 @@ class Boss : public Actor, public IDamageable {
   int MaxHp() const { return static_cast<int>(maxHp_); }
   void SetHealthRatio(float ratio) { hp_ = maxHp_ * Clamp(ratio, 0.01f, 1.f); }  // 디버그/튜닝용
   bool Cursed() const { return curse_ > 0; }
+  bool Poisoned() const { return poison_ > 0; }
   const char* AttackName() const { return attackName_; }
   int AttackNameTimer() const { return attackNameTimer_; }
 
@@ -71,6 +72,8 @@ class Boss : public Actor, public IDamageable {
   int tick_ = 0;
   int flash_ = 0;
   int curse_ = 0;  // 저주 표식 남은 프레임
+  int poison_ = 0;  // 독 남은 프레임 (30프레임마다 poisonDmg_)
+  float poisonDmg_ = 0.f;
   int curseCooldown_ = 0;  // 다시 저주에 걸릴 수 있을 때까지 남은 프레임
   Vec2 look_;
   const char* attackName_ = "";
